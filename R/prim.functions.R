@@ -128,7 +128,7 @@
 }
 
 #' Main function for bump hunting using the Patient Rule Induction Method (PRIM).
-#'
+#' @title Bump hunting using the Patient Rule Induction Method
 #' @param X Data frame to find rules in
 #' @param y Response vector, usually of type numeric
 #' @param alpha Quantile to peel off for numerical variables
@@ -136,7 +136,7 @@
 #' @param quality.funciton Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
-prim <- function(X, y, alpha, min.support, quality.function = mean) {
+prim.default <- function(X, y, alpha, min.support, quality.function = mean) {
 
   result <- list()
   result$box.qualities <- quality.function(y)
@@ -173,11 +173,38 @@ prim <- function(X, y, alpha, min.support, quality.function = mean) {
   class(result) <- "prim.peel.result"
 
   result$superrule <- .prim.condense.rules(result)
+  result$call <- match.call()
 
   return(result)
 }
 
+#' Main function for bump hunting using the Patient Rule Induction Method (PRIM).
+#' N.B. Remember to remove the intercept from the formula!
+#' @title Bump hunting using the Patient Rule Induction Method
+#' @param formula Formula with a response and terms
+#' @param data Data frame to find rules in
+#' @param alpha Quantile to peel off for numerical variables
+#' @param min.support Minimal size of a box to be valid
+#' @param quality.funciton Which function to use to determine the quality of a box, defaults to mean
+#' @return An S3 object of class prim.peel.result
+#' @author Jurian Baas
+prim.formula <- function(formula, data, alpha, min.support, quality.function = mean) {
+
+  mf <- model.frame(formula=formula, data=data)
+  X <- model.matrix(attr(mf, "terms"), data=mf)
+  y <- model.response(mf)
+
+  if(is.null(y)) {
+    stop("Data has no response variable, aborting...")
+  }
+
+  result <- prim.default(X, y, alpha, min.support, quality.function)
+  result$formula <- formula
+  return(result)
+}
+
 #' Plot an S3 object of class prim.peel.result
+#' @title Plot PRIM peel result
 #' @param peel.result An S3 object of class prim.peel.result
 #' @author Jurian Baas
 plot.prim.peel.result <- function(peel.result) {
@@ -186,6 +213,7 @@ plot.prim.peel.result <- function(peel.result) {
 }
 
 #' Plot an S3 object of class prim.test.result
+#' @title Plot PRIM test result
 #' @param An S3 object of class prim.test.result
 #' @author Jurian Baas
 plot.prim.test.result <- function(test.result) {
@@ -194,7 +222,7 @@ plot.prim.test.result <- function(test.result) {
 }
 
 #' Generate a subset of the data using the rules in the supplied prim S3 object
-#'
+#' @title PRIM subset creator
 #' @param prim.object An S3 object of class prim.peel.result or prim.test result
 #' @param X A data frame with at least those columns that were used in creating the prim S3 object
 #' @return A subset of X
@@ -209,7 +237,7 @@ prim.subset.box <- function(prim.object, X) {
 
 #' This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process
 #' is not the best on unobserved data.
-#'
+#' @title Bump hunting using the Patient Rule Induction Method
 #' @param peel.result An S3 object of class prim.peel.result
 #' @param X A data frame with at least those columns that were used in creating the prim.peel.result S3 object
 #' @param y Response vector, usually of type numeric

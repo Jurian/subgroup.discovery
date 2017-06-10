@@ -2,7 +2,7 @@
 % Please edit documentation in R/prim.functions.R
 \name{plot.prim.peel.result}
 \alias{plot.prim.peel.result}
-\title{Plot an S3 object of class prim.peel.result}
+\title{Plot PRIM peel result}
 \usage{
 \method{plot}{prim.peel.result}(peel.result)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/prim.functions.R
 \name{prim.subset.box}
 \alias{prim.subset.box}
-\title{Generate a subset of the data using the rules in the supplied prim S3 object}
+\title{PRIM subset creator}
 \usage{
 prim.subset.box(prim.object, X)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/prim.functions.R
 \name{plot.prim.test.result}
 \alias{plot.prim.test.result}
-\title{Plot an S3 object of class prim.test.result}
+\title{Plot PRIM test result}
 \usage{
 \method{plot}{prim.test.result}(test.result)
 }

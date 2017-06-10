@@ -2,8 +2,7 @@
 % Please edit documentation in R/prim.functions.R
 \name{prim.test}
 \alias{prim.test}
-\title{This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process
-is not the best on unobserved data.}
+\title{Bump hunting using the Patient Rule Induction Method}
 \usage{
 prim.test(peel.result, X, y)
 }
