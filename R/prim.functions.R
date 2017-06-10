@@ -134,7 +134,7 @@
 #' @param alpha Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
 #' @param quality.funciton Which function to use to determine the quality of a box, defaults to mean
-#' @return An object of class prim.peel.result
+#' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
 prim <- function(X, y, alpha, min.support, quality.function = mean) {
 
@@ -177,26 +177,26 @@ prim <- function(X, y, alpha, min.support, quality.function = mean) {
   return(result)
 }
 
-#' Plot an object of class prim.peel.result
-#' @param peel.result An object of class prim.peel.result
+#' Plot an S3 object of class prim.peel.result
+#' @param peel.result An S3 object of class prim.peel.result
 #' @author Jurian Baas
 plot.prim.peel.result <- function(peel.result) {
   plot(peel.result$supports, peel.result$box.qualities, col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2, xlab = "Support", ylab = "Box quality", main = "PRIM peel result")
   text(peel.result$supports, peel.result$box.qualities, labels=c("", peel.result$rules), cex = 0.7, pos = 4)
 }
 
-#' Plot an object of class prim.test.result
-#' @param An object of class prim.test.result
+#' Plot an S3 object of class prim.test.result
+#' @param An S3 object of class prim.test.result
 #' @author Jurian Baas
 plot.prim.test.result <- function(test.result) {
   plot(test.result$supports, test.result$box.qualities, col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2, xlab = "Support", ylab = "Box quality", main = "PRIM test result")
   text(test.result$supports, test.result$box.qualities, labels=c("", test.result$rules), cex = 0.7, pos = 4)
 }
 
-#' Generate a subset of the data using the rules in the supplied prim object
+#' Generate a subset of the data using the rules in the supplied prim S3 object
 #'
-#' @param prim.object An object of class prim.peel.result or prim.test result
-#' @param X A data frame with at least those columns that were used in creating the prim object
+#' @param prim.object An S3 object of class prim.peel.result or prim.test result
+#' @param X A data frame with at least those columns that were used in creating the prim S3 object
 #' @return A subset of X
 #' @author Jurian Baas
 prim.subset.box <- function(prim.object, X) {
@@ -210,10 +210,10 @@ prim.subset.box <- function(prim.object, X) {
 #' This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process
 #' is not the best on unobserved data.
 #'
-#' @param peel.result An object of class prim.peel.result
-#' @param X A data frame with at least those columns that were used in creating the prim.peel.result object
+#' @param peel.result An S3 object of class prim.peel.result
+#' @param X A data frame with at least those columns that were used in creating the prim.peel.result S3 object
 #' @param y Response vector, usually of type numeric
-#' @return An object of type prim.test.result
+#' @return An S3 object of type prim.test.result
 #' @author Jurian Baas
 prim.test <- function(peel.result, X, y) {
 
@@ -266,10 +266,10 @@ prim.test <- function(peel.result, X, y) {
   return(t)
 }
 
-#' This function condenses the many (redundant) rules of an object of class
+#' This function condenses the many (redundant) rules of an S3 object of class
 #' prim.peel.result or prim.test.result to a single rule.
 #'
-#' @param prim.object An object of class prim.peel.result or prim.test.result
+#' @param prim.object An S3 object of class prim.peel.result or prim.test.result
 #' @return The condensed rule as a single string
 #' @author Jurian Baas
 .prim.condense.rules <- function(prim.object) {
