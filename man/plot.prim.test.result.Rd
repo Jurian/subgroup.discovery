@@ -7,7 +7,7 @@
 \method{plot}{prim.test.result}(test.result)
 }
 \arguments{
-\item{An}{S3 object of class prim.test.result}
+\item{test.result}{An S3 object of class prim.test.result}
 }
 \description{
 Plot an S3 object of class prim.test.result

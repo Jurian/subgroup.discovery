@@ -17,8 +17,7 @@ prim.test(peel.result, X, y)
 An S3 object of type prim.test.result
 }
 \description{
-This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process
-is not the best on unobserved data.
+This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
 }
 \author{
 Jurian Baas
