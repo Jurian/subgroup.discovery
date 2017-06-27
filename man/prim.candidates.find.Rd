@@ -4,22 +4,26 @@
 \alias{prim.candidates.find}
 \title{Find all box candidates for a given (sub)set}
 \usage{
-prim.candidates.find(X, alpha, min.support, N)
+prim.candidates.find(X, y, peeling.quantile, min.support, N, quality.function)
 }
 \arguments{
 \item{X}{Data frame with observations (may be a subset of original data)}
 
-\item{alpha}{Quantile to peel off}
+\item{y}{Dependent variable, usually a numeric vector}
+
+\item{peeling.quantile}{Quantile to peel off}
 
 \item{min.support}{Minimal size of a box}
 
 \item{N}{Number of rows of original subset}
+
+\item{quality.function}{Function to use to determine box quality}
 }
 \value{
 A list of potential boxes
 }
 \description{
-This function goes through all columns of the dataset and tries to findbox candidates based on the quantile alpha and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
+This function goes through all columns of the dataset and tries to findbox candidates based on the quantile peeling.quantile and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
 }
 \author{
 Jurian Baas

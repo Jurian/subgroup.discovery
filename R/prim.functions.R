@@ -1,51 +1,95 @@
 
 #' @title  Find all box candidates for a given (sub)set
-#' @description This function goes through all columns of the dataset and tries to findbox candidates based on the quantile alpha and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
+#' @description This function goes through all columns of the dataset and tries to findbox candidates based on the quantile peeling.quantile and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
 #' @param X Data frame with observations (may be a subset of original data)
-#' @param alpha Quantile to peel off
+#' @param y Dependent variable, usually a numeric vector
+#' @param peeling.quantile Quantile to peel off
 #' @param min.support Minimal size of a box
 #' @param N Number of rows of original subset
+#' @param quality.function Function to use to determine box quality
 #' @return A list of potential boxes
 #' @author Jurian Baas
-prim.candidates.find <- function(X, alpha, min.support, N) {
+#' @importFrom stats quantile
+prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality.function) {
 
   c <- lapply(X, function(col) {
-
-    b <- list() # Used for storing indexes
-    r <- list() # Used for storing rules
-
+    r <- list()
     # Do something different depending on data type
     if(is.numeric(col)) {
 
-      b.min <- which(col < quantile(col, alpha))
-      b.plus <- which(col > quantile(col, 1-alpha))
+      quantile.min <- stats::quantile(col, peeling.quantile)
+      quantile.plus <- stats::quantile(col, 1 - peeling.quantile)
 
-      # Make sure the resulting subsets have enough support
-      if(length(b.min) > 0 & (length(col) - length(b.min)) / N >= min.support) {
-        b <- c(b, min = list(b.min))
-        r <- c(r, list(min = list(value = unname(quantile(col, alpha)), operator = "<", type = "numeric")))
+      idx.min <- col < quantile.min
+      idx.plus <- col > quantile.plus
+
+      if(sum(idx.min) > 0 & (length(col) - sum(idx.min)) / N >= min.support) {
+        r <- c(r,
+               list(
+                 min = list(
+                   value = unname(quantile.min),
+                   operator = ">=",
+                   type = "numeric",
+                   quality = quality.function(y[!idx.min]),
+                   idx = which(idx.min),
+                   size = sum(idx.min)/ length(col)
+                 )
+               )
+        )
       }
-      if(length(b.plus) > 0 & (length(col) - length(b.plus)) / N >= min.support) {
-        b <- c(b, plus = list(b.plus))
-        r <- c(r, list(plus = list(value = unname(quantile(col, 1-alpha)), operator = ">", type = "numeric")))
+
+      if(sum(idx.plus) > 0 & (length(col) - sum(idx.plus)) / N >= min.support) {
+        r <- c(r,
+               list(
+                 plus = list(
+                   value = unname(quantile.plus),
+                   operator = "<=",
+                   type = "numeric",
+                   quality = quality.function(y[!idx.plus]),
+                   idx = which(idx.plus),
+                   size = sum(idx.plus)/ length(col)
+                 )
+               )
+        )
       }
+
 
     } else if (is.logical(col)  ) {
 
       # Don't check if column consists of only T or F
       if(any(col) & any(!col)) {
 
-        b.min <- which(col)
-        b.plus <- which(!col)
+        idx.min <- col
+        idx.plus <- !col
 
         # Make sure the resulting subsets have enough support
         if((sum(!col) / N) >= min.support) {
-          b <- c(b, min = list(b.min))
-          r <- c(r, list(min = list(value = TRUE, operator = "==", type = "logical")))
+          r <- c(r,
+                 list(
+                   min = list(
+                     value = FALSE,
+                     operator = "==",
+                     type = "logical",
+                     quality = quality.function(y[!idx.min]),
+                     idx = which(idx.min),
+                     size = sum(idx.min)/ length(col)
+                   )
+                 )
+          )
         }
         if((sum(col) / N) >= min.support) {
-          b <- c(b, plus = list(b.plus))
-          r <- c(r, list(min = list(value = FALSE, operator = "==", type = "logical")))
+          r <- c(r,
+                 list(
+                   plus = list(
+                     value = TRUE,
+                     operator = "==",
+                     type = "logical",
+                     quality = quality.function(y[!idx.plus]),
+                     idx = which(idx.plus),
+                     size = sum(idx.plus)/ length(col)
+                   )
+                 )
+          )
         }
       }
 
@@ -56,28 +100,25 @@ prim.candidates.find <- function(X, alpha, min.support, N) {
       col <- factor(col)
 
       r <- lapply(levels(col), function(lvl) {
-        paste("==", lvl)
-      })
 
-      # Create a box candidate for each level
-      b <- lapply(levels(col), function(lvl) {
-
-        box <- which(col == lvl)
+        idx <- col == lvl
 
         # Make sure the resulting subsets have enough support
-        if((length(col) - length(box)) / N >= min.support) {
+        if((length(col) - sum(idx)) / N >= min.support) {
+          box <- list(
+            value = lvl,
+            operator = "!=",
+            type = "factor",
+            quality = quality.function(y[!idx]),
+            idx = which(idx),
+            size = sum(idx)/ length(col)
+          )
           return(box)
         }
-        return(NA)
+        return(NULL)
       })
-
-      # Remove any NA's
-      r <- r[!is.na(b)]
-      b <- b[!is.na(b)]
-
     }
-
-    return(list(rule = r, idx = b))
+    return(r)
 
   })
   # Remove empty elements from the list
@@ -85,55 +126,51 @@ prim.candidates.find <- function(X, alpha, min.support, N) {
   return(c)
 }
 
-#' @description This function calculates the quality of the dependant variable y given some box candidate
-#' @title Candidate box quality
-#' @param y Vector of values on which to determine the quality
-#' @param candidates List of candidates generated by prim.candidates.find()
-#' @param quality.function Function to use for a quality measure (usually mean)
-#' @return A list with the qualities of each supplied candidate box
-#' @author Jurian Baas
-prim.candidates.quality <- function(y, candidates, quality.function ) {
-
-  # Extract index information
-  candidates.idx <- lapply(candidates, function(box){box$idx})
-
-  lapply(candidates.idx, function(c) {
-    sapply(c, function(idx){
-      quality.function(y[-idx])
-    })
-  })
-}
-
 #' @title Find optimal box candidate
 #' @description This function goes through the box candidate qualities and finds the optimal candidate
-#' @param candidates.quality List of candidate qualities generated by prim.candidates.quality()
-#' @return Index of the optimal candidate in the candidates.quality argument
+#' @param candidates List of candidate generated by prim.candidates.find()
+#' @return A list with the optimal candidate information
 #' @author Jurian Baas
-prim.candidates.best <- function(candidates.quality) {
+prim.candidates.best <- function(candidates) {
 
-  # Find the best value for each column
-  m <- sapply(candidates.quality, function(x) c(idx = which.max(x), value = max(x)))
-  # Find the best value among the previous best
-  m.index <- which.max(m[2,])
-  m.subindex <- m[1,m.index]
+  qualities <- sapply(candidates, function(x){
+    c(
+      min = ifelse(is.null(x$min$quality), NA, x$min$quality),
+      plus = ifelse(is.null(x$plus$quality), NA, x$plus$quality))
+  })
 
-  names(m.index) <- names(candidates.quality)[m.index]
+  idx <- which(qualities == max(qualities, na.rm = T), arr.ind = T)
 
-  # Return the indexes
-  return(c(m.index, m.subindex))
+  # Break any ties at random
+  if(nrow(idx) > 1) {
+
+    sizes <- sapply(candidates, function(x){
+      c(
+        min = ifelse(is.null(x$min$size), NA, x$min$size),
+        plus = ifelse(is.null(x$plus$size), NA, x$plus$size))
+    })
+
+    # Use a weighted random strategy, based on the size of the resulting subset
+    idx <- idx[sample(nrow(idx), 1, prob = 1 - sizes[idx]),]
+  }
+
+  best <- candidates[[ idx[2] ]][[ rownames(qualities)[idx[1]] ]]
+  best$name <- colnames(qualities)[idx[2]]
+
+  return(best)
 }
 
 #' @description  Main function for bump hunting using the Patient Rule Induction Method (PRIM).
 #' @title Bump hunting using the Patient Rule Induction Method
 #' @param X Data frame to find rules in
 #' @param y Response vector, usually of type numeric
-#' @param alpha Quantile to peel off for numerical variables
+#' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
 #' @param quality.function Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
 #' @export
-prim.default <- function(X, y, alpha, min.support, quality.function = mean) {
+prim.default <- function(X, y, peeling.quantile, min.support, quality.function = mean) {
 
   result <- list()
   result$box.qualities <- quality.function(y)
@@ -152,30 +189,26 @@ prim.default <- function(X, y, alpha, min.support, quality.function = mean) {
     if(nrow(X) / N <= min.support) break
 
     # Find box candidates
-    candidates <- prim.candidates.find(X, alpha, min.support, N)
+    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, N, quality.function)
 
     if(length(candidates) == 0) break
 
-    candidates.quality <- prim.candidates.quality(y, candidates, quality.function)
-    candidates.final <- prim.candidates.best(candidates.quality)
+    cf <- prim.candidates.best(candidates)
 
-    idx <- unlist(candidates[[ candidates.final[1] ]]$idx[candidates.final[2]])
-    rule.info <- candidates[[ candidates.final[1] ]]$rule[[candidates.final[2]]]
-
-    X <- X[-idx,]
-    y <- y[-idx]
+    X <- X[-cf$idx,]
+    y <- y[-cf$idx]
 
     result$box.qualities <- c(result$box.qualities, quality.function(y))
     result$supports <- c(result$supports, length(y)/N)
 
-    result$rule.values <- c(result$rule.values, rule.info$value)
-    result$rule.names <- c(result$rule.names, names(candidates.final)[1])
-    result$rule.operators <- c(result$rule.operators, rule.info$operator)
-    result$rule.types <- c(result$rule.types, rule.info$type)
+    result$rule.values <- c(result$rule.values, cf$value)
+    result$rule.names <- c(result$rule.names, cf$name)
+    result$rule.operators <- c(result$rule.operators, cf$operator)
+    result$rule.types <- c(result$rule.types, cf$type)
   }
 
   result$rule.names <- factor(result$rule.names, levels = colnames(X))
-  result$rule.operators <- factor(result$rule.operators, levels = c("<", ">", "=="))
+  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
   result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
 
   class(result) <- "prim.peel.result"
@@ -190,13 +223,13 @@ prim.default <- function(X, y, alpha, min.support, quality.function = mean) {
 #' @title Bump hunting using the Patient Rule Induction Method
 #' @param formula Formula with a response and terms
 #' @param data Data frame to find rules in
-#' @param alpha Quantile to peel off for numerical variables
+#' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
 #' @param quality.function Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
 #' @export
-prim.formula <- function(formula, data, alpha, min.support, quality.function = mean) {
+prim.formula <- function(formula, data, peeling.quantile, min.support, quality.function = mean) {
 
   mf <- stats::model.frame(formula=formula, data=data)
   X <- data.frame(stats::model.matrix(attr(mf, "terms"), data=mf)[,-1])
@@ -207,7 +240,7 @@ prim.formula <- function(formula, data, alpha, min.support, quality.function = m
     stop("Data has no response variable, aborting...")
   }
 
-  result <- prim.default(X, y, alpha, min.support, quality.function)
+  result <- prim.default(X, y, peeling.quantile, min.support, quality.function)
   result$formula <- formula
   return(result)
 }
@@ -216,14 +249,15 @@ prim.formula <- function(formula, data, alpha, min.support, quality.function = m
 #' @title Plot PRIM peel result
 #' @param peel.result An S3 object of class prim.peel.result
 #' @author Jurian Baas
+#' @importFrom graphics plot text
 plot.prim.peel.result <- function(peel.result) {
-  plot(
+  graphics::plot(
     peel.result$supports,
     peel.result$box.qualities,
     col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
     xlab = "Support", ylab = "Box quality",
     main = "PRIM peel result")
-  text(
+  graphics::text(
     peel.result$supports,
     peel.result$box.qualities,
     labels=c("", paste(peel.result$rule.names, peel.result$rule.operators, peel.result$rule.values) ),
@@ -234,14 +268,15 @@ plot.prim.peel.result <- function(peel.result) {
 #' @title Plot PRIM test result
 #' @param test.result An S3 object of class prim.test.result
 #' @author Jurian Baas
+#' @importFrom graphics plot text
 plot.prim.test.result <- function(test.result) {
-  plot(
+  graphics::plot(
     test.result$supports,
     test.result$box.qualities,
     col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
     xlab = "Support", ylab = "Box quality",
     main = "PRIM test result")
-  text(
+  graphics::text(
     test.result$supports,
     test.result$box.qualities,
     labels=c("", paste(test.result$rule.names, test.result$rule.operators, test.result$rule.values) ),
@@ -258,7 +293,7 @@ plot.prim.test.result <- function(test.result) {
 prim.superrule.index <- function(prim.object, X) {
 
   if(class(prim.object) != "prim.peel.result" & class(prim.object) != "prim.test.result") {
-    error("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
+    stop("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
   }
   return(with(X, eval(parse(text = prim.object$superrule))))
 }
@@ -274,7 +309,7 @@ prim.superrule.index <- function(prim.object, X) {
 prim.test <- function(peel.result, X, y) {
 
   if(class(peel.result) != "prim.peel.result") {
-    error("Supplied argument is not of class prim.peel.result, aborting...")
+    stop("Supplied argument is not of class prim.peel.result, aborting...")
   }
 
   quality.function <- peel.result$quality.function
@@ -303,9 +338,9 @@ prim.test <- function(peel.result, X, y) {
       value = peel.result$rule.values[i],
       type = as.character(peel.result$rule.types[i])
     )
-    rule <- paste0("X$", paste( rule.info$name, rule.info$operator, rule.info$value))
 
-    idx <- eval(parse(text = rule))
+    rule <- paste( rule.info$name, rule.info$operator, rule.info$value)
+    idx <- !with(X, eval(parse(text = rule)))
 
     # Check if this rule has any observations in the test data
     if(sum(idx) > 0) {
@@ -331,7 +366,7 @@ prim.test <- function(peel.result, X, y) {
   }
 
   result$rule.names <- factor(result$rule.names, levels = colnames(X))
-  result$rule.operators <- factor(result$rule.operators, levels = c("<", ">", "=="))
+  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
   result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
 
   result$superrule <- prim.condense.rules(result)
@@ -348,7 +383,7 @@ prim.test <- function(peel.result, X, y) {
 prim.condense.rules <- function(prim.object) {
 
   if(class(prim.object) != "prim.peel.result" & class(prim.object) != "prim.test.result"){
-    error("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
+    stop("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
   }
 
   # Search for the rules leading up to the best box
@@ -362,7 +397,7 @@ prim.condense.rules <- function(prim.object) {
     score = prim.object$box.qualities[rule.idx],
     type = factor(prim.object$rule.types[rule.idx])
   )
-  levels(t$operator) <-  c(">=", "<=", "!=")
+  #levels(t$operator) <-  c(">=", "<=", "!=")
 
   # Group by name first
   t <- by(t, t$name, function(x) {
@@ -382,9 +417,15 @@ prim.condense.rules <- function(prim.object) {
 
 #' @title PRIM covering algorithm
 #' @description Temporary description
+#' @param X Data frame to find rules in
+#' @param y Response vector, usually of type numeric
+#' @param peeling.quantile Quantile to peel off for numerical variables
+#' @param min.support Minimal size of a box to be valid
+#' @param train.fraction Train-test split fraction used in validation
+#' @param max.boxes Optional maximum number of boxes
 #' @author Jurian Baas
 #' @export
-prim.cover <- function(X, y, alpha, min.support, train.fraction = 0.6, max.boxes = NA) {
+prim.cover <- function(X, y, peeling.quantile, min.support, train.fraction = 0.6, max.boxes = NA) {
 
   N <- nrow(X) * min.support
   box.nr <- 1
@@ -397,7 +438,7 @@ prim.cover <- function(X, y, alpha, min.support, train.fraction = 0.6, max.boxes
 
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
-    p.train <- prim.default(X[train], y[train], alpha, min.support)
+    p.train <- prim.default(X[train], y[train], peeling.quantile, min.support)
     p.test <- prim.test(p.train, X[-train], y[-train])
 
     idx <- prim.superrule.index(p.test, X)

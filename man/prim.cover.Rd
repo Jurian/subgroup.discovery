@@ -4,7 +4,21 @@
 \alias{prim.cover}
 \title{PRIM covering algorithm}
 \usage{
-prim.cover()
+prim.cover(X, y, peeling.quantile, min.support, train.fraction = 0.6,
+  max.boxes = NA)
+}
+\arguments{
+\item{X}{Data frame to find rules in}
+
+\item{y}{Response vector, usually of type numeric}
+
+\item{peeling.quantile}{Quantile to peel off for numerical variables}
+
+\item{min.support}{Minimal size of a box to be valid}
+
+\item{train.fraction}{Train-test split fraction used in validation}
+
+\item{max.boxes}{Optional maximum number of boxes}
 }
 \description{
 Temporary description

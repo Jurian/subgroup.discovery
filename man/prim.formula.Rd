@@ -4,14 +4,15 @@
 \alias{prim.formula}
 \title{Bump hunting using the Patient Rule Induction Method}
 \usage{
-prim.formula(formula, data, alpha, min.support, quality.function = mean)
+prim.formula(formula, data, peeling.quantile, min.support,
+  quality.function = mean)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
 
 \item{data}{Data frame to find rules in}
 
-\item{alpha}{Quantile to peel off for numerical variables}
+\item{peeling.quantile}{Quantile to peel off for numerical variables}
 
 \item{min.support}{Minimal size of a box to be valid}
 
