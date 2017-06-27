@@ -1,0 +1,11 @@
+age,married,house,income,gender,class
+22,FALSE,FALSE,28,male,0
+46,FALSE,TRUE,32,female,0
+24,TRUE,TRUE,24,male,0
+25,FALSE,FALSE,27,male,0
+29,TRUE,TRUE,32,female,0
+45,TRUE,TRUE,30,female,1
+63,TRUE,TRUE,58,male,1
+36,TRUE,FALSE,52,male,1
+23,FALSE,TRUE,40,female,1
+50,TRUE,TRUE,28,female,1

@@ -15,7 +15,7 @@ prim.default(X, y, alpha, min.support, quality.function = mean)
 
 \item{min.support}{Minimal size of a box to be valid}
 
-\item{quality.funciton}{Which function to use to determine the quality of a box, defaults to mean}
+\item{quality.function}{Which function to use to determine the quality of a box, defaults to mean}
 }
 \value{
 An S3 object of class prim.peel.result
