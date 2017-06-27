@@ -2,7 +2,7 @@
 
 
 #' This function goes through all columns of the dataset and tries to find
-#' box candidates based on the quantile alpha and minimum support min.support.
+#' box candidates based on the quantile peeling.quantile and minimum support min.support.
 #' Note that the indexes returned are those that have to be removed in order to create the box!
 #'
 #' @param x Data frame with observations (may be a subset of original data)
@@ -14,7 +14,7 @@
 #' @examples
 #' prim.candidates.find(myData, 0.01, 0.4, nrow(myData))
 #' prim.candidates.find(myDataSubset, 0.01, 0.4, nrow(myData))
-.prim.candidates.find <- function(X, alpha, min.support, N) {
+.prim.candidates.find <- function(X, peeling.quantile, min.support, N) {
 
   c <- lapply(X, function(col) {
 
@@ -24,17 +24,17 @@
     # Do something different depending on data type
     if(is.numeric(col)) {
 
-      b.min <- which(col < quantile(col, alpha))
-      b.plus <- which(col > quantile(col, 1-alpha))
+      b.min <- which(col < quantile(col, peeling.quantile))
+      b.plus <- which(col > quantile(col, 1-peeling.quantile))
 
       # Make sure the resulting subsets have enough support
       if(length(b.min) > 0 & (length(col) - length(b.min)) / N >= min.support) {
         b <- c(b, idx.min = list(b.min))
-        r <- c(r, rule.min = paste("<", quantile(col, alpha)))
+        r <- c(r, rule.min = paste("<", quantile(col, peeling.quantile)))
       }
       if(length(b.plus) > 0 & (length(col) - length(b.plus)) / N >= min.support) {
         b <- c(b, idx.plus = list(b.plus))
-        r <- c(r, rule.plus = paste(">", quantile(col, 1-alpha)))
+        r <- c(r, rule.plus = paste(">", quantile(col, 1-peeling.quantile)))
       }
 
     } else if (is.logical(col)  ) {
@@ -131,12 +131,12 @@
 #' @title Bump hunting using the Patient Rule Induction Method
 #' @param X Data frame to find rules in
 #' @param y Response vector, usually of type numeric
-#' @param alpha Quantile to peel off for numerical variables
+#' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
 #' @param quality.funciton Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
-prim.default <- function(X, y, alpha, min.support, quality.function = mean) {
+prim.default <- function(X, y, peeling.quantile, min.support, quality.function = mean) {
 
   result <- list()
   result$box.qualities <- quality.function(y)
@@ -151,12 +151,12 @@ prim.default <- function(X, y, alpha, min.support, quality.function = mean) {
     if(nrow(X) / N <= min.support) break
 
     # Find box candidates
-    candidates <- .prim.candidates.find(X, alpha, min.support, N)
+    candidates <- .prim.candidates.find(X, peeling.quantile, min.support, N)
 
     if(length(candidates) == 0) break
 
     candidates.quality <- .prim.candidates.quality(y, candidates, quality.function)
-    candidates.final <- .prim.candidates.best(candidates, candidates.quality)
+    candidates.final <- .prim.candidates.best(candidates.quality)
 
     idx <- unlist(candidates[[ candidates.final[1] ]]$idx[candidates.final[2]])
     rule <- unlist(candidates[[ candidates.final[1] ]]$rule[candidates.final[2]])
@@ -183,12 +183,12 @@ prim.default <- function(X, y, alpha, min.support, quality.function = mean) {
 #' @title Bump hunting using the Patient Rule Induction Method
 #' @param formula Formula with a response and terms
 #' @param data Data frame to find rules in
-#' @param alpha Quantile to peel off for numerical variables
+#' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
 #' @param quality.funciton Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
-prim.formula <- function(formula, data, alpha, min.support, quality.function = mean) {
+prim.formula <- function(formula, data, peeling.quantile, min.support, quality.function = mean) {
 
   mf <- model.frame(formula=formula, data=data)
   X <- model.matrix(attr(mf, "terms"), data=mf)
@@ -198,7 +198,7 @@ prim.formula <- function(formula, data, alpha, min.support, quality.function = m
     stop("Data has no response variable, aborting...")
   }
 
-  result <- prim.default(X, y, alpha, min.support, quality.function)
+  result <- prim.default(X, y, peeling.quantile, min.support, quality.function)
   result$formula <- formula
   return(result)
 }
@@ -233,6 +233,15 @@ prim.subset.box <- function(prim.object, X) {
     error("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
   }
   return(subset(X, eval(parse(text = prim.object$superrule))))
+}
+
+prim.subset.box.index <- function(prim.object, X) {
+
+  if(class(prim.object) != "prim.peel.result" & class(prim.object) != "prim.test.result") {
+    error("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
+  }
+  with(X, which(eval(parse(text = prim.object$superrule))))
+
 }
 
 #' This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process
@@ -356,7 +365,49 @@ prim.test <- function(peel.result, X, y) {
   return(paste(t, collapse = " & "))
 }
 
+prim.cover.default <- function(X, y, peeling.quantile, min.support, validation.fraction = 0.25, quality.function = mean, max.boxes = NA) {
 
+  N <- nrow(X)
 
+  result <- list()
+  class(result) <- "prim.cover.result"
 
+  box.nr <- 1
+
+  repeat {
+
+    if(N / X <= min.support) break
+    if(!is.na(max.boxes) & max.boxes == box.nr) break
+
+    test.idx <- sample(1:nrow(X), nrow(X) * validation.fraction)
+
+    p <- prim.default(X[-test.idx,], y[-test.idx], peeling.quantile, min.support, quality.function)
+    p <- prim.test(p, X[test.idx,], y[test.idx])
+
+    i <- prim.subset.box.index(p, X)
+
+    X <- X[-i,]
+
+    box.nr <- box.nr + 1
+  }
+
+  return(result)
+
+}
+
+prim.cover.formula <- function(formula, data, peeling.quantile, min.support, quality.function = mean, max.boxes = NA) {
+
+  mf <- model.frame(formula=formula, data=data)
+  X <- model.matrix(attr(mf, "terms"), data=mf)
+  y <- model.response(mf)
+
+  if(is.null(y)) {
+    stop("Data has no response variable, aborting...")
+  }
+
+  result <- prim.cover.default(X, y, peeling.quantile, min.support, quality.function, max.boxes)
+  result$formula <- formula
+
+  return(result)
+}
 
