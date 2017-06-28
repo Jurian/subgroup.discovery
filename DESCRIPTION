@@ -1,10 +1,17 @@
-Package: bump.hunting
+Package: subgroup.discovery
 Type: Package
-Title: Bump hunting on multi-dimensional data
+Title: Discovering subgroups in multi-dimensional data
 Version: 0.1.0
-Authors@R: person("Jurian", "Baas", email = "jurian@jurianbaas.nl", role = c("aut", "cre"))
+Authors@R: c(
+          person("Jurian", "Baas", email = "jurian@jurianbaas.nl", role = c("aut", "cre", "cph")),
+          person("Ad", "Feelders", email = "A.J.Feelders@uu.nl", role = c("ctb")))
 Description: The objective of bump hunting is to find regions in the input (attribute/feature) space with relatively high (low) values for the target variable. The regions are described by simple rules of the type if: condition-1 and ... and condition-n then: estimated target value. Given the data (or a subset of the data), the goal is to produce a box B within which the target mean is as large as possible. There are many problems where finding such regions is of considerable practical interest.  Often these are problems where a decision maker can in a sense choose or select the values of the input variables so as to optimize the value of the target variable. In bump hunting it is customary to follow a so-called covering strategy. This means that the same box construction (rule induction) algorithm is appliedsequentially to subsets of the data.
+Depends: R (>= 2.10)
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
+URL: https://github.com/Jurian/subgroup.discovery
+BugReports: https://github.com/Jurian/subgroup.discovery/issues
+Date: 2017-06-15
+Suggests: testthat, data.table

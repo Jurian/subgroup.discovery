@@ -247,39 +247,45 @@ prim.formula <- function(formula, data, peeling.quantile, min.support, quality.f
 
 #' @description Plot an S3 object of class prim.peel.result
 #' @title Plot PRIM peel result
-#' @param peel.result An S3 object of class prim.peel.result
+#' @param x An S3 object of class prim.peel.result
+#' @param ... Optional arguments to pass on
 #' @author Jurian Baas
+#' @export
 #' @importFrom graphics plot text
-plot.prim.peel.result <- function(peel.result) {
+plot.prim.peel.result <- function(x, ...) {
   graphics::plot(
-    peel.result$supports,
-    peel.result$box.qualities,
+    x$supports,
+    x$box.qualities,
     col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
     xlab = "Support", ylab = "Box quality",
-    main = "PRIM peel result")
+    main = "PRIM peel result",
+    ...)
   graphics::text(
-    peel.result$supports,
-    peel.result$box.qualities,
-    labels=c("", paste(peel.result$rule.names, peel.result$rule.operators, peel.result$rule.values) ),
+    x$supports,
+    x$box.qualities,
+    labels=c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
     cex = 0.7, pos = 4)
 }
 
 #' @description Plot an S3 object of class prim.test.result
 #' @title Plot PRIM test result
-#' @param test.result An S3 object of class prim.test.result
+#' @param x An S3 object of class prim.test.result
+#' @param ... Optional arguments to pass on
 #' @author Jurian Baas
+#' @export
 #' @importFrom graphics plot text
-plot.prim.test.result <- function(test.result) {
+plot.prim.test.result <- function(x, ...) {
   graphics::plot(
-    test.result$supports,
-    test.result$box.qualities,
+    x$supports,
+    x$box.qualities,
     col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
     xlab = "Support", ylab = "Box quality",
-    main = "PRIM test result")
+    main = "PRIM test result",
+    ...)
   graphics::text(
-    test.result$supports,
-    test.result$box.qualities,
-    labels=c("", paste(test.result$rule.names, test.result$rule.operators, test.result$rule.values) ),
+    x$supports,
+    x$box.qualities,
+    labels=c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
     cex = 0.7, pos = 4)
 }
 
@@ -295,7 +301,7 @@ prim.superrule.index <- function(prim.object, X) {
   if(class(prim.object) != "prim.peel.result" & class(prim.object) != "prim.test.result") {
     stop("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
   }
-  return(with(X, eval(parse(text = prim.object$superrule))))
+  return(with(X, eval(parse(text = paste0(prim.object$superrule, collapse = " & ")))))
 }
 
 #' @description This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
@@ -411,8 +417,8 @@ prim.condense.rules <- function(prim.object) {
     })
   })
 
-  # Collapse to character vector, collapse further to a string combined with '&' sign and return
-  return(paste(unlist(t), collapse = " & "))
+  # Collapse to character vector
+  return(unlist(as.vector(unname(t))))
 }
 
 #' @title PRIM covering algorithm

@@ -1,24 +1,15 @@
 
-library(bump.hunting)
+library(subgroup.discovery)
 library(data.table)
 
-dat <- fread("inst/extdata/credit.csv")
-dat$gender <- factor(dat$gender)
+credit <- read.csv("inst/extdata/credit.csv")
 
 X <- dat[,-6]
 y <- dat$class
 
 
-p.train <- prim.default(X = X, y = y, peeling.quantile  = 0.01, min.support = 0.4)
+p.train <- prim.default(X = X, y = y, peeling.quantile  = 0.1, min.support = 0.4)
 plot(p.train)
-
-
-
-
-
-
-
-
 
 
 
