@@ -228,12 +228,14 @@ prim.default <- function(X, y, peeling.quantile, min.support, quality.function =
 #' @param quality.function Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
+#' @importFrom stats model.frame model.response
 #' @export
 prim.formula <- function(formula, data, peeling.quantile, min.support, quality.function = mean) {
 
-  mf <- stats::model.frame(formula=formula, data=data)
-  X <- data.frame(stats::model.matrix(attr(mf, "terms"), data=mf)[,-1])
-  y <- stats::model.response(mf)
+  X <- stats::model.frame(formula = formula, data = data)
+  #X <- data.frame(stats::model.matrix(attr(mf, "terms"), data = mf)[,-1])
+  y <- stats::model.response(X)
+  X <- X[,-1]
 
   #return(X)
   if(is.null(y)) {
