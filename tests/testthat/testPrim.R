@@ -17,6 +17,22 @@ test_that("Test functionality on credit data set", {
 
 })
 
+test_that("Test functionality on credit data set using the formula interface", {
+
+  data(credit)
+
+  p.train <- prim.formula(class ~ ., data = credit, peeling.quantile = 0.1, min.support = 0.4)
+  expect_is(p.train, "prim.peel.result")
+
+  expect_is(p.train$formula, "formula")
+  expect_identical(p.train$formula, as.formula(class ~ .))
+
+  rule <- prim.superrule.index(p.train, credit)
+  expect_is(rule, "logical")
+  expect_identical(rule, c(F, F, F, F, F, T, T, T, F, T))
+
+})
+
 test_that("Test functionality on pima data set", {
 
   data(pima)
