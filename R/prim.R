@@ -165,12 +165,20 @@ prim.candidates.best <- function(candidates) {
 #' @param X Data frame to find rules in
 #' @param y Response vector, usually of type numeric
 #' @param peeling.quantile Quantile to peel off for numerical variables
-#' @param min.support Minimal size of a box to be valid
+#' @param min.support Minimal size of a box to be valid, as a fraction
 #' @param quality.function Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel.result
 #' @author Jurian Baas
 #' @export
 prim.default <- function(X, y, peeling.quantile, min.support, quality.function = mean) {
+
+  if(!is.data.frame(X)) stop("Paramter X has to be a data frame")
+  if(!is.vector(y)) stop("Parameter y has to be a vector")
+  if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
+  if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
+  if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
+  if(min.support <= 0) stop("Minimum support must be positive")
+  if(min.support >= 1) stop("Minimum support must be a fraction smaller than 1")
 
   result <- list()
   result$box.qualities <- quality.function(y)
@@ -420,7 +428,7 @@ prim.condense.rules <- function(prim.object) {
   })
 
   # Collapse to character vector
-  return(unlist(as.vector(unname(t))))
+  return(unname(unlist(as.vector(t))))
 }
 
 #' @title PRIM covering algorithm
