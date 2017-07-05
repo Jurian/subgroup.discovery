@@ -299,6 +299,48 @@ plot.prim.test.result <- function(x, ...) {
     cex = 0.7, pos = 4)
 }
 
+#' @title
+#' @description
+#'
+#'
+#'
+#' @author Jurian Baas
+#' @export
+summary.prim.peel.result <- function(x, ...) {
+  cat("  ======================================", "\n")
+  cat("  ========== PRIM PEEL RESULT ==========", "\n")
+  cat("  ======================================", "\n")
+  cat("\n")
+  best.box.idx <- which.max(x$box.qualities)
+  cat("  ============== BEST BOX ==============", "\n")
+  cat("  quality: ", x$box.qualities[best.box.idx], "\n")
+  cat("  support: ", x$supports[best.box.idx], "\n")
+  cat("\n")
+  cat("  ================ RULES ===============", "\n")
+  cat(" ", paste0(x$superrule, collapse = " & \n  "))
+}
+
+#' @title
+#' @description
+#'
+#'
+#'
+#' @author Jurian Baas
+#' @export
+summary.prim.test.result <- function(x, ...) {
+  cat("  ======================================", "\n")
+  cat("  ========== PRIM PEEL RESULT ==========", "\n")
+  cat("  ======================================", "\n")
+  cat("\n")
+  best.box.idx <- which.max(x$box.qualities)
+  cat("  ============== BEST BOX ==============", "\n")
+  cat("  quality: ", x$box.qualities[best.box.idx], "\n")
+  cat("  support: ", x$supports[best.box.idx], "\n")
+  cat("\n")
+  cat("  ================ RULES ===============", "\n")
+  cat(" ", paste0(x$superrule, collapse = " & \n  "))
+}
+
 #' @description Generate a subset of the data using the rules in the supplied prim S3 object
 #' @title PRIM subset creator
 #' @param prim.object An S3 object of class prim.peel.result or prim.test result
