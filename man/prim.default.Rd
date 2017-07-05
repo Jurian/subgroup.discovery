@@ -13,7 +13,7 @@ prim.default(X, y, peeling.quantile, min.support, quality.function = mean)
 
 \item{peeling.quantile}{Quantile to peel off for numerical variables}
 
-\item{min.support}{Minimal size of a box to be valid}
+\item{min.support}{Minimal size of a box to be valid, as a fraction}
 
 \item{quality.function}{Which function to use to determine the quality of a box, defaults to mean}
 }
