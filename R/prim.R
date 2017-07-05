@@ -299,46 +299,44 @@ plot.prim.test.result <- function(x, ...) {
     cex = 0.7, pos = 4)
 }
 
-#' @title
-#' @description
-#'
-#'
-#'
+#' @title Summarize a PRIM peeling result object
+#' @description Summarize a PRIM peeling result object
+#' @param object An S3 object of class prim.peel.result
+#' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
-summary.prim.peel.result <- function(x, ...) {
+summary.prim.peel.result <- function(object, ...) {
   cat("  ======================================", "\n")
   cat("  ========== PRIM PEEL RESULT ==========", "\n")
   cat("  ======================================", "\n")
   cat("\n")
-  best.box.idx <- which.max(x$box.qualities)
+  best.box.idx <- which.max(object$box.qualities)
   cat("  ============== BEST BOX ==============", "\n")
-  cat("  quality: ", x$box.qualities[best.box.idx], "\n")
-  cat("  support: ", x$supports[best.box.idx], "\n")
+  cat("  quality: ", object$box.qualities[best.box.idx], "\n")
+  cat("  support: ", object$supports[best.box.idx], "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(x$superrule, collapse = " & \n  "))
+  cat(" ", paste0(object$superrule, collapse = " & \n  "))
 }
 
-#' @title
-#' @description
-#'
-#'
-#'
+#' @title Summarize a PRIM test result object
+#' @description Summarize a PRIM test result object
+#' @param object An S3 object of class prim.test.result
+#' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
-summary.prim.test.result <- function(x, ...) {
+summary.prim.test.result <- function(object, ...) {
   cat("  ======================================", "\n")
-  cat("  ========== PRIM PEEL RESULT ==========", "\n")
+  cat("  ========== PRIM TEST RESULT ==========", "\n")
   cat("  ======================================", "\n")
   cat("\n")
-  best.box.idx <- which.max(x$box.qualities)
+  best.box.idx <- which.max(object$box.qualities)
   cat("  ============== BEST BOX ==============", "\n")
-  cat("  quality: ", x$box.qualities[best.box.idx], "\n")
-  cat("  support: ", x$supports[best.box.idx], "\n")
+  cat("  quality: ", object$box.qualities[best.box.idx], "\n")
+  cat("  support: ", object$supports[best.box.idx], "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(x$superrule, collapse = " & \n  "))
+  cat(" ", paste0(object$superrule, collapse = " & \n  "))
 }
 
 #' @description Generate a subset of the data using the rules in the supplied prim S3 object

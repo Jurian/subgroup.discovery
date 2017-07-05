@@ -2,6 +2,8 @@
 
 S3method(plot,prim.peel.result)
 S3method(plot,prim.test.result)
+S3method(summary,prim.peel.result)
+S3method(summary,prim.test.result)
 export(prim)
 export(prim.cover)
 export(prim.default)
