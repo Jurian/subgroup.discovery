@@ -4,12 +4,16 @@
 \alias{summary.prim.cover}
 \title{Summarize a PRIM cover result object}
 \usage{
-\method{summary}{prim.cover}(object, ...)
+\method{summary}{prim.cover}(object, ..., round = T, digits = 2)
 }
 \arguments{
 \item{object}{An S3 object of class prim.cover}
 
 \item{...}{Optional arguments to pass on}
+
+\item{round}{Optional setting to disable rounding}
+
+\item{digits}{Optional setting to control nr of digits to round}
 }
 \description{
 Summarize a PRIM cover result object

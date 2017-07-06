@@ -51,12 +51,25 @@ testthat::test_that("Test the validating functionality on pima data set", {
 })
 
 testthat::test_that("Test the PRIM covering algorithm using the pima data set", {
+
   data(pima)
 
   X <- pima[,-9]
   y <- pima$class
 
-  p.cov <- subgroup.discovery::prim.cover(X, y, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
+  p.cov <- subgroup.discovery::prim.cover.default(X, y, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
+
+  expect_is(p.cov, "prim.cover")
+  #expect_identical(length(p.cov$covers), 3)
+  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.N))))
+
+})
+
+testthat::test_that("Test the PRIM covering algorithm using the formula interface", {
+
+  data(pima)
+
+  p.cov <- subgroup.discovery::prim.cover.formula(class ~ ., pima, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
 
   expect_is(p.cov, "prim.cover")
   #expect_identical(length(p.cov$covers), 3)

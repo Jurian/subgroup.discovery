@@ -4,12 +4,16 @@
 \alias{summary.prim.peel}
 \title{Summarize a PRIM peeling result object}
 \usage{
-\method{summary}{prim.peel}(object, ...)
+\method{summary}{prim.peel}(object, ..., round = T, digits = 2)
 }
 \arguments{
 \item{object}{An S3 object of class prim.peel}
 
 \item{...}{Optional arguments to pass on}
+
+\item{round}{Optional setting to disable rounding}
+
+\item{digits}{Optional setting to control nr of digits to round}
 }
 \description{
 Summarize a PRIM peeling result object
