@@ -432,6 +432,7 @@ summary.prim.validate <- function(object, ..., round = T, digits = 2) {
 #' @author Jurian Baas
 #' @export
 summary.prim.cover <- function(object, ..., round = T, digits = 2) {
+
   cat("  ======================================", "\n")
   cat("  ========== PRIM COVER RESULT =========", "\n")
   cat("  ======================================", "\n")
@@ -453,10 +454,6 @@ summary.prim.cover <- function(object, ..., round = T, digits = 2) {
       cat("  |\n")
       cat("  |  Box quality: ", round(x$cov.quality, digits), "(", round(x$cov.quality / x$cov.avg.quality, digits), ") \n")
       cat("  |  Box support: ", round(x$cov.support / x$cov.N, digits) , " (", x$cov.support, ") \n")
-      cat("\n")
-      cat("  ================ RULES ===============", "\n")
-      cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
-      cat("\n","\n","\n")
     }
   } else {
 
@@ -470,12 +467,15 @@ summary.prim.cover <- function(object, ..., round = T, digits = 2) {
       cat("  |\n")
       cat("  |  Box quality: ", x$cov.quality, "(", x$cov.quality / x$cov.avg.quality, ") \n")
       cat("  |  Box support: ", x$cov.support / x$cov.N , " (", x$cov.support, ") \n")
-      cat("\n")
-      cat("  ================ RULES ===============", "\n")
-      cat(" ", paste0(x$superrule, collapse = "\n  "))
-      cat("\n","\n","\n")
     }
   }
+
+  if(!is.null(x$superrule)){
+    cat("\n")
+    cat("  ================ RULES ===============", "\n")
+    cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
+  }
+  cat("\n","\n","\n")
 }
 
 #' @description Generate a subset of the data using the rules in the supplied prim S3 object
@@ -656,9 +656,19 @@ prim.cover.default <- function(X, y, peeling.quantile, min.support, train.fracti
   repeat {
 
     # In case the user set a max nr of boxes
-    if(!is.na(max.boxes) & box.nr > max.boxes) break;
     # Box has become too small
-    if(nrow(X) < N) break;
+    if((!is.na(max.boxes) & box.nr > max.boxes) | (nrow(X) < N) ) {
+      p.validate <- list()
+      class(p.validate) <- "prim.validate"
+
+      p.validate$cov.N <- nrow(X)
+      p.validate$cov.support <- nrow(X)
+      p.validate$cov.avg.quality <- quality.function(y)
+      p.validate$cov.quality <- quality.function(y)
+
+      covers <- c(covers, list(p.validate))
+      break
+    }
 
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
