@@ -386,6 +386,7 @@ prim.test <- function(peel.result, X, y) {
 
   repeat {
 
+    # Stop if there are no more boxes
     if(i > length(peel.result$rule.names)) break
 
     rule.info <- list(
@@ -417,6 +418,9 @@ prim.test <- function(peel.result, X, y) {
       result$redundant <- c(result$redundant, i)
 
     }
+
+    # This box could have all the remaining observations, no need to iterate further
+    if(nrow(X) == 0) break
 
     i <- i + 1
   }
