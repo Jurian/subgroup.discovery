@@ -16,6 +16,10 @@ Developed by Jurian Baas, part of master thesis in Artificial Intelligence.
 
 Special thanks for contributions such as tips and bug-fixing to dr. A.J. Feelders, Utrecht University, Department of Information and Computing Sciences
 
+## References
+
+1. Friedman, Jerome H., and Nicholas I. Fisher. "Bump hunting in high-dimensional data." Statistics and Computing 9.2 (1999): 123-143.
+
 ## Citation
 
 To cite this package, use citation("subgroup.discovery") in R
