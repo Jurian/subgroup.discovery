@@ -271,7 +271,7 @@ plot.prim.peel <- function(x, ...) {
   graphics::text(
     x$supports,
     x$box.qualities,
-    labels=c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
+    labels = c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
     cex = 0.7, pos = 4)
 }
 
@@ -293,8 +293,36 @@ plot.prim.validate <- function(x, ...) {
   graphics::text(
     x$supports,
     x$box.qualities,
-    labels=c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
+    labels = c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
     cex = 0.7, pos = 4)
+}
+
+#' @description Plot an S3 object of class prim.cover
+#' @title Plot PRIM cover result
+#' @param x An S3 object of class prim.cover
+#' @param ... Optional arguments to pass on
+#' @author Jurian Baas
+#' @export
+#' @importFrom graphics plot text
+plot.prim.cover <- function(x, ...) {
+
+  dat <- data.frame(t(sapply(x$covers, function(c) {
+    list( supports = c$cov.support, box.qualities = c$cov.quality)
+  })))
+
+  graphics::plot(
+    dat$supports,
+    dat$box.qualities,
+    col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
+    xlab = "Support", ylab = "Box quality",
+    main = "PRIM cover result",
+    ...)
+
+  graphics::text(
+    dat$supports,
+    dat$box.qualities,
+    labels = paste("Cover", 1 : length(x$covers)),
+    cex = 0.7, pos = 1)
 }
 
 #' @title Summarize a PRIM peeling result object
