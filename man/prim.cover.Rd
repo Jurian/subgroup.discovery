@@ -4,8 +4,8 @@
 \alias{prim.cover}
 \title{PRIM covering algorithm}
 \usage{
-prim.cover(X, y, peeling.quantile, min.support, train.fraction = 0.6,
-  max.boxes = NA)
+prim.cover(X, y, peeling.quantile, min.support, train.fraction = 0.66,
+  max.boxes = NA, quality.function = mean)
 }
 \arguments{
 \item{X}{Data frame to find rules in}
@@ -19,6 +19,8 @@ prim.cover(X, y, peeling.quantile, min.support, train.fraction = 0.6,
 \item{train.fraction}{Train-test split fraction used in validation}
 
 \item{max.boxes}{Optional maximum number of boxes}
+
+\item{quality.function}{Optional setting for function to use for determining subset quality, defaults to mean}
 }
 \description{
 Temporary description

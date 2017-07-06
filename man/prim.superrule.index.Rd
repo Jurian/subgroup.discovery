@@ -7,7 +7,7 @@
 prim.superrule.index(prim.object, X)
 }
 \arguments{
-\item{prim.object}{An S3 object of class prim.peel.result or prim.test result}
+\item{prim.object}{An S3 object of class prim.peel or prim.validate result}
 
 \item{X}{A data frame with at least those columns that were used in creating the prim S3 object}
 }

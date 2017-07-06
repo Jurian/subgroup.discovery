@@ -18,7 +18,7 @@ prim.default(X, y, peeling.quantile, min.support, quality.function = mean)
 \item{quality.function}{Which function to use to determine the quality of a box, defaults to mean}
 }
 \value{
-An S3 object of class prim.peel.result
+An S3 object of class prim.peel
 }
 \description{
 Main function for bump hunting using the Patient Rule Induction Method (PRIM).

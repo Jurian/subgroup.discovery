@@ -7,13 +7,13 @@
 prim.condense.rules(prim.object)
 }
 \arguments{
-\item{prim.object}{An S3 object of class prim.peel.result or prim.test.result}
+\item{prim.object}{An S3 object of class prim.peel or prim.validate}
 }
 \value{
 The condensed rule as a single string
 }
 \description{
-This function condenses the many (redundant) rules of an S3 object of class prim.peel.result or prim.test.result to a single rule.
+This function condenses the many (redundant) rules of an S3 object of class prim.peel or prim.validate to a single rule.
 }
 \author{
 Jurian Baas

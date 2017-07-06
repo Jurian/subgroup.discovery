@@ -167,7 +167,7 @@ prim.candidates.best <- function(candidates) {
 #' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid, as a fraction
 #' @param quality.function Which function to use to determine the quality of a box, defaults to mean
-#' @return An S3 object of class prim.peel.result
+#' @return An S3 object of class prim.peel
 #' @author Jurian Baas
 #' @export
 prim.default <- function(X, y, peeling.quantile, min.support, quality.function = mean) {
@@ -189,15 +189,15 @@ prim.default <- function(X, y, peeling.quantile, min.support, quality.function =
   result$rule.types <- character()
   result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
   result$quality.function <- quality.function
-
-  N <- nrow(X)
+  result$N <- nrow(X)
+  result$avg.quality <- quality.function(y)
 
   repeat {
 
-    if(nrow(X) / N <= min.support) break
+    if(nrow(X) / result$N <= min.support) break
 
     # Find box candidates
-    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, N, quality.function)
+    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, result$N, quality.function)
 
     if(length(candidates) == 0) break
 
@@ -207,7 +207,7 @@ prim.default <- function(X, y, peeling.quantile, min.support, quality.function =
     y <- y[-cf$idx]
 
     result$box.qualities <- c(result$box.qualities, quality.function(y))
-    result$supports <- c(result$supports, length(y)/N)
+    result$supports <- c(result$supports, length(y) / result$N)
 
     result$rule.values <- c(result$rule.values, cf$value)
     result$rule.names <- c(result$rule.names, cf$name)
@@ -219,7 +219,7 @@ prim.default <- function(X, y, peeling.quantile, min.support, quality.function =
   result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
   result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
 
-  class(result) <- "prim.peel.result"
+  class(result) <- "prim.peel"
 
   result$superrule <- prim.condense.rules(result)
   result$call <- match.call()
@@ -234,18 +234,16 @@ prim.default <- function(X, y, peeling.quantile, min.support, quality.function =
 #' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
 #' @param quality.function Which function to use to determine the quality of a box, defaults to mean
-#' @return An S3 object of class prim.peel.result
+#' @return An S3 object of class prim.peel
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response
 #' @export
 prim.formula <- function(formula, data, peeling.quantile, min.support, quality.function = mean) {
 
   X <- stats::model.frame(formula = formula, data = data)
-  #X <- data.frame(stats::model.matrix(attr(mf, "terms"), data = mf)[,-1])
   y <- stats::model.response(X)
   X <- X[,-1]
 
-  #return(X)
   if(is.null(y)) {
     stop("Data has no response variable, aborting...")
   }
@@ -255,14 +253,14 @@ prim.formula <- function(formula, data, peeling.quantile, min.support, quality.f
   return(result)
 }
 
-#' @description Plot an S3 object of class prim.peel.result
+#' @description Plot an S3 object of class prim.peel
 #' @title Plot PRIM peel result
-#' @param x An S3 object of class prim.peel.result
+#' @param x An S3 object of class prim.peel
 #' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
 #' @importFrom graphics plot text
-plot.prim.peel.result <- function(x, ...) {
+plot.prim.peel <- function(x, ...) {
   graphics::plot(
     x$supports,
     x$box.qualities,
@@ -277,14 +275,14 @@ plot.prim.peel.result <- function(x, ...) {
     cex = 0.7, pos = 4)
 }
 
-#' @description Plot an S3 object of class prim.test.result
+#' @description Plot an S3 object of class prim.validate
 #' @title Plot PRIM test result
-#' @param x An S3 object of class prim.test.result
+#' @param x An S3 object of class prim.validate
 #' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
 #' @importFrom graphics plot text
-plot.prim.test.result <- function(x, ...) {
+plot.prim.validate <- function(x, ...) {
   graphics::plot(
     x$supports,
     x$box.qualities,
@@ -301,80 +299,117 @@ plot.prim.test.result <- function(x, ...) {
 
 #' @title Summarize a PRIM peeling result object
 #' @description Summarize a PRIM peeling result object
-#' @param object An S3 object of class prim.peel.result
+#' @param object An S3 object of class prim.peel
 #' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
-summary.prim.peel.result <- function(object, ...) {
+summary.prim.peel <- function(object, ...) {
   cat("  ======================================", "\n")
   cat("  ========== PRIM PEEL RESULT ==========", "\n")
   cat("  ======================================", "\n")
   cat("\n")
+  cat("  Original set size: ", object$N, "\n")
+  cat("  Original set quality: ", object$avg.quality, "\n")
+  cat("\n")
   best.box.idx <- which.max(object$box.qualities)
   cat("  ============== BEST BOX ==============", "\n")
   cat("  quality: ", object$box.qualities[best.box.idx], "\n")
-  cat("  support: ", object$supports[best.box.idx], "\n")
+  cat("  support: ", object$supports[best.box.idx], " (", object$supports[best.box.idx] * object$N, ") \n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$superrule, collapse = " & \n  "))
+  cat(" ", paste0(object$superrule, collapse = "\n  "))
 }
 
 #' @title Summarize a PRIM test result object
 #' @description Summarize a PRIM test result object
-#' @param object An S3 object of class prim.test.result
+#' @param object An S3 object of class prim.validate
 #' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
-summary.prim.test.result <- function(object, ...) {
+summary.prim.validate <- function(object, ...) {
   cat("  ======================================", "\n")
   cat("  ========== PRIM TEST RESULT ==========", "\n")
   cat("  ======================================", "\n")
   cat("\n")
+  cat("  Original set size: ", object$N, "\n")
+  cat("  Original set quality: ", object$avg.quality, "\n")
+  cat("\n")
   best.box.idx <- which.max(object$box.qualities)
   cat("  ============== BEST BOX ==============", "\n")
   cat("  quality: ", object$box.qualities[best.box.idx], "\n")
-  cat("  support: ", object$supports[best.box.idx], "\n")
+  cat("  support: ", object$supports[best.box.idx], " (", object$supports[best.box.idx] * object$N, ") \n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$superrule, collapse = " & \n  "))
+  cat(" ", paste0(object$superrule, collapse = "\n  "))
+}
+
+#' @title Summarize a PRIM cover result object
+#' @description Summarize a PRIM cover result object
+#' @param object An S3 object of class prim.cover
+#' @param ... Optional arguments to pass on
+#' @author Jurian Baas
+#' @export
+summary.prim.cover <- function(object, ...) {
+  cat("  ======================================", "\n")
+  cat("  ========== PRIM COVER RESULT =========", "\n")
+  cat("  ======================================", "\n")
+  cat("\n")
+  cat("  Peeling quantile:", object$peeling.quantile, "\n")
+  cat("  Min support:", object$min.support, "\n")
+  cat("  Train/test split:", object$train.fraction, "\n")
+  cat("\n")
+  for(i in 1:length(object$covers)) {
+    x <- object$covers[[i]]
+    cat("\n")
+    cat("  ======================================", "\n")
+    cat("  ============== COVER", i,"===============", "\n")
+    cat("  Original set size: ", x$cov.N, "\n")
+    cat("  Original set quality: ", x$cov.avg.quality, "\n")
+    cat("\n")
+    cat("  Box quality: ", x$cov.quality, "(", x$cov.quality / x$cov.avg.quality, ") \n")
+    cat("  Box support: ", x$cov.support / x$cov.N , " (", x$cov.support, ") \n")
+    cat("\n")
+    cat("  ================ RULES ===============", "\n")
+    cat(" ", paste0(x$superrule, collapse = "\n  "))
+    cat("\n","\n","\n")
+  }
 }
 
 #' @description Generate a subset of the data using the rules in the supplied prim S3 object
 #' @title PRIM subset creator
-#' @param prim.object An S3 object of class prim.peel.result or prim.test result
+#' @param prim.object An S3 object of class prim.peel or prim.validate result
 #' @param X A data frame with at least those columns that were used in creating the prim S3 object
 #' @return A subset of X
 #' @author Jurian Baas
 #' @export
 prim.superrule.index <- function(prim.object, X) {
 
-  if(class(prim.object) != "prim.peel.result" & class(prim.object) != "prim.test.result") {
-    stop("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
+  if(class(prim.object) != "prim.peel" & class(prim.object) != "prim.validate") {
+    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
   }
   return(with(X, eval(parse(text = paste0(prim.object$superrule, collapse = " & ")))))
 }
 
-#' @description This function takes the result of prim() and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
+#' @description This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
 #' @title Bump hunting using the Patient Rule Induction Method
-#' @param peel.result An S3 object of class prim.peel.result
-#' @param X A data frame with at least those columns that were used in creating the prim.peel.result S3 object
+#' @param peel.result An S3 object of class prim.peel
+#' @param X A data frame with at least those columns that were used in creating the prim.peel S3 object
 #' @param y Response vector, usually of type numeric
-#' @return An S3 object of type prim.test.result
+#' @return An S3 object of type prim.validate
 #' @author Jurian Baas
 #' @export
-prim.test <- function(peel.result, X, y) {
+prim.validate <- function(peel.result, X, y) {
 
-  if(class(peel.result) != "prim.peel.result") {
-    stop("Supplied argument is not of class prim.peel.result, aborting...")
+  if(class(peel.result) != "prim.peel") {
+    stop("Supplied argument is not of class prim.peel, aborting...")
   }
 
   quality.function <- peel.result$quality.function
 
-  N <- nrow(X)
   i <- 1
 
   result <- list()
-  class(result) <- "prim.test.result"
+  class(result) <- "prim.validate"
   result$box.qualities <- quality.function(y)
   result$supports <- 1
   result$redundant <- integer()
@@ -383,6 +418,8 @@ prim.test <- function(peel.result, X, y) {
   result$rule.types <- character()
   result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
   result$quality.function <- quality.function
+  result$N <- nrow(X)
+  result$avg.quality <- quality.function(y)
 
   repeat {
 
@@ -406,7 +443,7 @@ prim.test <- function(peel.result, X, y) {
       y <- y[!idx]
 
       result$box.qualities <- c(result$box.qualities, quality.function(y))
-      result$supports <- c(result$supports, length(y)/N)
+      result$supports <- c(result$supports, length(y) / result$N)
 
       result$rule.values <- c(result$rule.values, rule.info$value)
       result$rule.names <- c(result$rule.names, rule.info$name)
@@ -435,15 +472,15 @@ prim.test <- function(peel.result, X, y) {
   return(result)
 }
 
-#' @description This function condenses the many (redundant) rules of an S3 object of class prim.peel.result or prim.test.result to a single rule.
+#' @description This function condenses the many (redundant) rules of an S3 object of class prim.peel or prim.validate to a single rule.
 #' @title Condense multiple (redundant) rules
-#' @param prim.object An S3 object of class prim.peel.result or prim.test.result
+#' @param prim.object An S3 object of class prim.peel or prim.validate
 #' @return The condensed rule as a single string
 #' @author Jurian Baas
 prim.condense.rules <- function(prim.object) {
 
-  if(class(prim.object) != "prim.peel.result" & class(prim.object) != "prim.test.result"){
-    stop("Supplied argument is not of class prim.peel.result or prim.test.result, aborting...")
+  if(class(prim.object) != "prim.peel" & class(prim.object) != "prim.validate"){
+    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
   }
 
   # Search for the rules leading up to the best box
@@ -457,8 +494,6 @@ prim.condense.rules <- function(prim.object) {
     score = prim.object$box.qualities[rule.idx],
     type = factor(prim.object$rule.types[rule.idx])
   )
-  #levels(t$operator) <-  c(">=", "<=", "!=")
-
   # Group by name first
   t <- by(t, t$name, function(x) {
 
@@ -483,35 +518,53 @@ prim.condense.rules <- function(prim.object) {
 #' @param min.support Minimal size of a box to be valid
 #' @param train.fraction Train-test split fraction used in validation
 #' @param max.boxes Optional maximum number of boxes
+#' @param quality.function Optional setting for function to use for determining subset quality, defaults to mean
 #' @author Jurian Baas
 #' @export
-prim.cover <- function(X, y, peeling.quantile, min.support, train.fraction = 0.6, max.boxes = NA) {
+prim.cover <- function(X, y, peeling.quantile, min.support, train.fraction = 0.66, max.boxes = NA, quality.function = mean) {
 
   N <- nrow(X) * min.support
   box.nr <- 1
   covers <- list()
 
+  result <- list()
+  result$peeling.quantile = peeling.quantile
+  result$min.support = min.support
+  result$train.fraction = train.fraction
+  if(!is.na(max.boxes)) result$max.boxes = max.boxes
+  class(result) <- "prim.cover"
+
   repeat {
 
+    # In case the user set a max nr of boxes
     if(!is.na(max.boxes) & box.nr > max.boxes) break;
+    # Box has become too small
     if(nrow(X) < N) break;
 
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
-    p.train <- prim.default(X[train], y[train], peeling.quantile, min.support)
-    p.test <- prim.test(p.train, X[-train], y[-train])
+    p.train <- prim.default(X[train,], y[train], peeling.quantile, min.support, quality.function)
+    p.validate <- prim.validate(p.train, X[-train,], y[-train])
 
-    idx <- prim.superrule.index(p.test, X)
+    idx <- prim.superrule.index(p.validate, X)
 
-    X <- X[!idx]
+    p.validate$cov.N <- nrow(X)
+    p.validate$cov.support <- sum(idx)
+    p.validate$cov.avg.quality <- quality.function(y)
+    p.validate$cov.quality <- quality.function(y[idx])
+
+    X <- X[!idx,]
     y <- y[!idx]
     box.nr <- box.nr + 1
 
-    covers <- c(covers, p.test$superrule)
+
+
+    covers <- c(covers, list(p.validate))
 
   }
 
-  return(covers)
+  result$covers <- covers
+  return(result)
 }
 
 #' @title PRIM main entrance
