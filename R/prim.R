@@ -259,12 +259,14 @@ prim.formula <- function(formula, data, peeling.quantile, min.support, quality.f
 #' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
-#' @importFrom graphics plot text
+#' @importFrom graphics par plot points text
 plot.prim.peel <- function(x, ...) {
+  graphics::par(bty = "l")
   graphics::plot (
     x$supports,
     x$box.qualities,
-    col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
+    xlim = c(1, 0),
+    type = "n",
     xlab = "Support", ylab = "Box quality",
     main = "PRIM peel result",
     ...)
@@ -272,11 +274,15 @@ plot.prim.peel <- function(x, ...) {
     x$supports,
     x$box.qualities
   )
+  graphics::points (
+    x$supports,
+    x$box.qualities,
+    col= "royalblue4", pch = 19, cex = 1, lty = "solid", lwd = 2)
   graphics::text (
     x$supports,
     x$box.qualities,
     labels = c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
-    cex = 0.7, pos = 4)
+    cex = 0.7, pos = 4, col = "orangered4", font = 2)
 }
 
 #' @description Plot an S3 object of class prim.validate
@@ -285,24 +291,30 @@ plot.prim.peel <- function(x, ...) {
 #' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
-#' @importFrom graphics plot text
+#' @importFrom graphics par plot points text
 plot.prim.validate <- function(x, ...) {
+  graphics::par(bty = "l")
   graphics::plot (
     x$supports,
     x$box.qualities,
-    col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
+    xlim = c(1, 0),
+    type = "n",
     xlab = "Support", ylab = "Box quality",
-    main = "PRIM test result",
+    main = "PRIM validate result",
     ...)
   graphics::lines (
     x$supports,
     x$box.qualities
   )
+  graphics::points (
+    x$supports,
+    x$box.qualities,
+    col= "royalblue4", pch = 19, cex = 1, lty = "solid", lwd = 2)
   graphics::text (
     x$supports,
     x$box.qualities,
     labels = c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
-    cex = 0.7, pos = 4)
+    cex = 0.7, pos = 4, col = "orangered4", font = 2)
 }
 
 #' @description Plot an S3 object of class prim.cover
@@ -311,35 +323,38 @@ plot.prim.validate <- function(x, ...) {
 #' @param ... Optional arguments to pass on
 #' @author Jurian Baas
 #' @export
-#' @importFrom graphics plot text arrows
+#' @importFrom graphics par plot lines points text
 plot.prim.cover <- function(x, ...) {
 
   dat <- data.frame(t(sapply(x$covers, function(c) {
     c( supports = c$cov.support / c$cov.N, box.qualities = c$cov.quality)
   })))
-
+  graphics::par(bty = "l")
   graphics::plot (
     dat$supports,
     dat$box.qualities,
-    col= "blue", pch = 19, cex = 1, lty = "solid", lwd = 2,
+    type = "n",
+    xlim = c(0,1),
     xlab = "Relative support", ylab = "Box quality",
     main = "PRIM cover result",
     ...)
-  graphics::arrows (
-    x0 = dat$supports[-nrow(dat)],
-    y0 = dat$box.qualities[-nrow(dat)],
-    x1 = dat$supports[-1],
-    y1 = dat$box.qualities[-1],
-    length = 0.15,
-    angle = 35,
-    code = 2,
-    lwd = 2
+  graphics::lines (
+    x = dat$supports,
+    y = dat$box.qualities,
+    #x1 = dat$supports[-1],
+    #y1 = dat$box.qualities[-1],
+    lwd = 2,
+    col = "ivory4"
   )
+  graphics::points (
+    dat$supports,
+    dat$box.qualities,
+    col= "royalblue4", pch = 19, cex = 1, lty = "solid", lwd = 2)
   graphics::text (
     dat$supports,
     dat$box.qualities,
     labels = paste("Cover", 1 : length(x$covers)),
-    cex = 0.9, pos = 3)
+    cex = 0.7, pos = 2, col = "orangered4", font = 2)
 }
 
 #' @title Summarize a PRIM peeling result object
@@ -454,6 +469,14 @@ summary.prim.cover <- function(object, ..., round = T, digits = 2) {
       cat("  |\n")
       cat("  |  Box quality: ", round(x$cov.quality, digits), "(", round(x$cov.quality / x$cov.avg.quality, digits), ") \n")
       cat("  |  Box support: ", round(x$cov.support / x$cov.N, digits) , " (", x$cov.support, ") \n")
+
+      if(!is.null(x$superrule)){
+        cat("\n")
+        cat("  ================ RULES ===============", "\n")
+        cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
+      }
+      cat("\n","\n","\n")
+
     }
   } else {
 
@@ -467,15 +490,17 @@ summary.prim.cover <- function(object, ..., round = T, digits = 2) {
       cat("  |\n")
       cat("  |  Box quality: ", x$cov.quality, "(", x$cov.quality / x$cov.avg.quality, ") \n")
       cat("  |  Box support: ", x$cov.support / x$cov.N , " (", x$cov.support, ") \n")
+
+      if(!is.null(x$superrule)){
+        cat("\n")
+        cat("  ================ RULES ===============", "\n")
+        cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
+      }
+      cat("\n","\n","\n")
     }
   }
 
-  if(!is.null(x$superrule)){
-    cat("\n")
-    cat("  ================ RULES ===============", "\n")
-    cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
-  }
-  cat("\n","\n","\n")
+
 }
 
 #' @description Generate a subset of the data using the rules in the supplied prim S3 object
