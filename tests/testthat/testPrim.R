@@ -8,7 +8,7 @@ testthat::test_that("Test functionality on credit data set", {
   X <- credit[,-6]
   y <- credit$class
 
-  p.train <- subgroup.discovery::prim.default(X = X, y = y, peeling.quantile = 0.1, min.support = 0.4)
+  p.train <- subgroup.discovery::prim.peel(X = X, y = y, peeling.quantile = 0.1, min.support = 0.4)
   expect_is(p.train, "prim.peel")
 
   rule <- subgroup.discovery::prim.superrule.index(p.train, X)
@@ -21,7 +21,7 @@ testthat::test_that("Test functionality on credit data set using the formula int
 
   data(credit)
 
-  p.train <- subgroup.discovery::prim.formula(class ~ ., data = credit, peeling.quantile = 0.1, min.support = 0.4)
+  p.train <- subgroup.discovery::prim.peel(class ~ ., data = credit, peeling.quantile = 0.1, min.support = 0.4)
   expect_is(p.train, "prim.peel")
 
   expect_is(p.train$formula, "formula")
@@ -42,7 +42,7 @@ testthat::test_that("Test the validating functionality on pima data set", {
 
   train <- sample(1:nrow(X), nrow(X) * 0.66)
 
-  p.train <- subgroup.discovery::prim.default(X = X[train,], y = y[train], peeling.quantile = 0.05, min.support = 0.1)
+  p.train <- subgroup.discovery::prim.peel(X = X[train,], y = y[train], peeling.quantile = 0.05, min.support = 0.1)
   expect_is(p.train, "prim.peel")
 
   p.test <- subgroup.discovery::prim.validate(p.train, X[-train,], y[-train])
@@ -57,7 +57,7 @@ testthat::test_that("Test the PRIM covering algorithm using the pima data set", 
   X <- pima[,-9]
   y <- pima$class
 
-  p.cov <- subgroup.discovery::prim.cover.default(X, y, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
+  p.cov <- subgroup.discovery::prim.cover(X = X, y = y, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
 
   expect_is(p.cov, "prim.cover")
   #expect_identical(length(p.cov$covers), 3)
@@ -69,7 +69,7 @@ testthat::test_that("Test the PRIM covering algorithm using the formula interfac
 
   data(pima)
 
-  p.cov <- subgroup.discovery::prim.cover.formula(class ~ ., pima, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
+  p.cov <- subgroup.discovery::prim.cover(class ~ ., data = pima, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
 
   expect_is(p.cov, "prim.cover")
   #expect_identical(length(p.cov$covers), 3)

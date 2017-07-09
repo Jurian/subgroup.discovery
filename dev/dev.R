@@ -31,4 +31,11 @@ t <- prim.cover(X, y, 0.01, 0.4, 0.6)
 
 data(pima)
 
-p.cov <- prim.cover.formula(class ~ ., pima, peeling.quantile = 0.05, min.support = 0.05)
+p.cov <- prim.cover(class ~ ., pima, peeling.quantile = 0.05, min.support = 0.05)
+
+
+
+
+
+data(pima)
+p.div <- prim.diversify(X = pima[,-9], y = pima$class, n = 10, peeling.quantile = 0.05, min.support = 0.05)
