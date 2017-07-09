@@ -4,7 +4,7 @@
 \alias{summary.prim.validate}
 \title{Summarize a PRIM test result object}
 \usage{
-\method{summary}{prim.validate}(object, ..., round = T, digits = 2)
+\method{summary}{prim.validate}(object, ..., round = TRUE, digits = 2)
 }
 \arguments{
 \item{object}{An S3 object of class prim.validate}

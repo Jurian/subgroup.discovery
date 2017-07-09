@@ -669,6 +669,37 @@ plot.prim.cover <- function(x, ...) {
     cex = 0.7, pos = 2, col = "orangered4", font = 2)
 }
 
+#' @description Plot an S3 object of class prim.diversify
+#' @title Plot PRIM diversify result
+#' @param x An S3 object of class prim.diversify
+#' @param ... Optional arguments to pass on
+#' @author Jurian Baas
+#' @export
+#' @importFrom graphics par plot points text
+plot.prim.diversify <- function(x, ...) {
+  dat <- data.frame(t(sapply(x$attempts, function(a) {
+    c( supports = a$att.support / a$att.N,
+       box.qualities = a$att.quality)
+  })))
+  graphics::par(bty = "l")
+  graphics::plot (
+    dat$supports,
+    dat$box.qualities,
+    type = "n",
+    xlab = "Support", ylab = "Box quality",
+    main = "PRIM diversify result",
+    ...)
+  graphics::points (
+    dat$supports,
+    dat$box.qualities,
+    col= "royalblue4", pch = 19, cex = 1, lty = "solid", lwd = 2)
+  graphics::text (
+    dat$supports,
+    dat$box.qualities,
+    labels = paste("Attempt", 1 : length(x$attempts)),
+    cex = 0.7, pos = 1, col = "orangered4", font = 2)
+}
+
 #' @title Summarize a PRIM peeling result object
 #' @description Summarize a PRIM peeling result object
 #' @param object An S3 object of class prim.peel
@@ -677,7 +708,7 @@ plot.prim.cover <- function(x, ...) {
 #' @param digits Optional setting to control nr of digits to round
 #' @author Jurian Baas
 #' @export
-summary.prim.peel <- function(object, ..., round = T, digits = 2) {
+summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
   cat("  ======================================", "\n")
   cat("  ========== PRIM PEEL RESULT ==========", "\n")
   cat("  ======================================", "\n")
@@ -718,7 +749,7 @@ summary.prim.peel <- function(object, ..., round = T, digits = 2) {
 #' @param digits Optional setting to control nr of digits to round
 #' @author Jurian Baas
 #' @export
-summary.prim.validate <- function(object, ..., round = T, digits = 2) {
+summary.prim.validate <- function(object, ..., round = TRUE, digits = 2) {
   cat("  ======================================", "\n")
   cat("  ========== PRIM TEST RESULT ==========", "\n")
   cat("  ======================================", "\n")
@@ -758,7 +789,7 @@ summary.prim.validate <- function(object, ..., round = T, digits = 2) {
 #' @param digits Optional setting to control nr of digits to round
 #' @author Jurian Baas
 #' @export
-summary.prim.cover <- function(object, ..., round = T, digits = 2) {
+summary.prim.cover <- function(object, ..., round = TRUE, digits = 2) {
 
   cat("  ======================================", "\n")
   cat("  ========== PRIM COVER RESULT =========", "\n")
@@ -804,3 +835,43 @@ summary.prim.cover <- function(object, ..., round = T, digits = 2) {
 
 }
 
+#' @title Summarize a PRIM cover diversify object
+#' @description Summarize a PRIM diversify result object
+#' @param object An S3 object of class prim.diversify
+#' @param ... Optional arguments to pass on
+#' @param round Optional setting to disable rounding
+#' @param digits Optional setting to control nr of digits to round
+#' @author Jurian Baas
+#' @export
+summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
+  cat("  ======================================", "\n")
+  cat("  ======== PRIM DIVERSIFY RESULT =======", "\n")
+  cat("  ======================================", "\n")
+  cat("  |\n")
+  cat("  |  Peeling quantile:", object$peeling.quantile, "\n")
+  cat("  |  Min support:", object$min.support, "\n")
+  cat("  |  Train/test split:", object$train.fraction, "\n")
+  cat("\n")
+
+  if(!round) {
+    digits = 7
+  }
+
+
+  for(i in 1:length(object$attempts)) {
+    x <- object$attempts[[i]]
+    cat("\n")
+    cat("  ======================================", "\n")
+    cat("  ============= ATTEMPT", i,"==============", "\n")
+    cat("  |  Cover set size: ", x$att.N, "\n")
+    cat("  |  Cover set quality: ", round(x$att.avg.quality, digits), "\n")
+    cat("  |\n")
+    cat("  |  Box quality: ", round(x$att.quality, digits), "(", round(x$att.quality / x$att.avg.quality, digits), ") \n")
+    cat("  |  Box support: ", round(x$att.support / x$att.N, digits) , " (", x$att.support, ") \n")
+    cat("\n")
+    cat("  ================ RULES ===============", "\n")
+    cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
+    cat("\n","\n","\n")
+
+  }
+}

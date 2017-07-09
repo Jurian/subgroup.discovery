@@ -4,7 +4,7 @@
 \alias{summary.prim.peel}
 \title{Summarize a PRIM peeling result object}
 \usage{
-\method{summary}{prim.peel}(object, ..., round = T, digits = 2)
+\method{summary}{prim.peel}(object, ..., round = TRUE, digits = 2)
 }
 \arguments{
 \item{object}{An S3 object of class prim.peel}
