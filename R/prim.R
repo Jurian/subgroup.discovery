@@ -327,7 +327,8 @@ plot.prim.validate <- function(x, ...) {
 plot.prim.cover <- function(x, ...) {
 
   dat <- data.frame(t(sapply(x$covers, function(c) {
-    c( supports = c$cov.support / c$cov.N, box.qualities = c$cov.quality)
+    c( supports = c$cov.support / c$cov.N,
+       box.qualities = c$cov.quality)
   })))
   graphics::par(bty = "l")
   graphics::plot (
@@ -341,8 +342,6 @@ plot.prim.cover <- function(x, ...) {
   graphics::lines (
     x = dat$supports,
     y = dat$box.qualities,
-    #x1 = dat$supports[-1],
-    #y1 = dat$box.qualities[-1],
     lwd = 2,
     col = "ivory4"
   )
@@ -457,49 +456,38 @@ summary.prim.cover <- function(object, ..., round = T, digits = 2) {
   cat("  |  Train/test split:", object$train.fraction, "\n")
   cat("\n")
 
-  if(round) {
-
-    for(i in 1:length(object$covers)) {
-      x <- object$covers[[i]]
-      cat("\n")
-      cat("  ======================================", "\n")
-      cat("  ============== COVER", i,"===============", "\n")
-      cat("  |  Cover set size: ", x$cov.N, "\n")
-      cat("  |  Cover set quality: ", round(x$cov.avg.quality, digits), "\n")
-      cat("  |\n")
-      cat("  |  Box quality: ", round(x$cov.quality, digits), "(", round(x$cov.quality / x$cov.avg.quality, digits), ") \n")
-      cat("  |  Box support: ", round(x$cov.support / x$cov.N, digits) , " (", x$cov.support, ") \n")
-
-      if(!is.null(x$superrule)){
-        cat("\n")
-        cat("  ================ RULES ===============", "\n")
-        cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
-      }
-      cat("\n","\n","\n")
-
-    }
-  } else {
-
-    for(i in 1:length(object$covers)) {
-      x <- object$covers[[i]]
-      cat("\n")
-      cat("  ======================================", "\n")
-      cat("  ============== COVER", i,"===============", "\n")
-      cat("  |  Cover set size: ", x$cov.N, "\n")
-      cat("  |  Cover set quality: ", x$cov.avg.quality, "\n")
-      cat("  |\n")
-      cat("  |  Box quality: ", x$cov.quality, "(", x$cov.quality / x$cov.avg.quality, ") \n")
-      cat("  |  Box support: ", x$cov.support / x$cov.N , " (", x$cov.support, ") \n")
-
-      if(!is.null(x$superrule)){
-        cat("\n")
-        cat("  ================ RULES ===============", "\n")
-        cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
-      }
-      cat("\n","\n","\n")
-    }
+  if(!round) {
+    digits = 7
   }
 
+  for(i in 1:length(object$covers)) {
+    x <- object$covers[[i]]
+    cat("\n")
+    cat("  ======================================", "\n")
+    cat("  ============== COVER", i,"===============", "\n")
+    cat("  |  Cover set size: ", x$cov.N, "\n")
+    cat("  |  Cover set quality: ", round(x$cov.avg.quality, digits), "\n")
+    cat("  |\n")
+    cat("  |  Box quality: ", round(x$cov.quality, digits), "(", round(x$cov.quality / x$cov.avg.quality, digits), ") \n")
+    cat("  |  Box support: ", round(x$cov.support / x$cov.N, digits) , " (", x$cov.support, ") \n")
+    cat("\n")
+    cat("  ================ RULES ===============", "\n")
+    cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
+    cat("\n","\n","\n")
+
+  }
+
+  x <- object$leftover
+
+  cat("\n")
+  cat("  ======================================", "\n")
+  cat("  ============== LEFTOVER ==============", "\n")
+  cat("  |  Cover set size: ", x$cov.N, "\n")
+  cat("  |  Cover set quality: ", round(x$cov.avg.quality, digits), "\n")
+  cat("  |\n")
+  cat("  |  Box quality: ", round(x$cov.quality, digits), "(", round(x$cov.quality / x$cov.avg.quality, digits), ") \n")
+  cat("  |  Box support: ", round(x$cov.support / x$cov.N, digits) , " (", x$cov.support, ") \n")
+  cat("\n","\n","\n")
 
 }
 
@@ -678,20 +666,26 @@ prim.cover.default <- function(X, y, peeling.quantile, min.support, train.fracti
   if(!is.na(max.boxes)) result$max.boxes = max.boxes
   class(result) <- "prim.cover"
 
+  y.quality <- quality.function(y)
+
   repeat {
 
-    # In case the user set a max nr of boxes
-    # Box has become too small
-    if((!is.na(max.boxes) & box.nr > max.boxes) | (nrow(X) < N) ) {
-      p.validate <- list()
-      class(p.validate) <- "prim.validate"
+    y.sub.quality <- quality.function(y)
 
-      p.validate$cov.N <- nrow(X)
-      p.validate$cov.support <- nrow(X)
-      p.validate$cov.avg.quality <- quality.function(y)
-      p.validate$cov.quality <- quality.function(y)
+    # In case:
+    # The user set a max nr of boxes and we reached that limit
+    # Current cover has become too small
+    # Current cover quality fell below overall quality
+    if((!is.na(max.boxes) & box.nr > max.boxes) | (nrow(X) < N) | y.sub.quality < y.quality ) {
+      p.leftover <- list()
+      class(p.leftover) <- "prim.cover.leftover"
 
-      covers <- c(covers, list(p.validate))
+      p.leftover$cov.N <- nrow(X)
+      p.leftover$cov.support <- nrow(X)
+      p.leftover$cov.avg.quality <- quality.function(y)
+      p.leftover$cov.quality <- quality.function(y)
+
+      result$leftover <- p.leftover
       break
     }
 
