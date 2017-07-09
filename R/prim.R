@@ -335,7 +335,7 @@ plot.prim.cover <- function(x, ...) {
     dat$box.qualities,
     type = "n",
     xlim = c(0,1),
-    xlab = "Relative support", ylab = "Box quality",
+    xlab = "Relative support", ylab = "Relative box quality",
     main = "PRIM cover result",
     ...)
   graphics::lines (
