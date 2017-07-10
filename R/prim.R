@@ -380,13 +380,24 @@ prim.validate <- function(peel.result, X, y) {
 #' @importFrom stats quantile
 prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality.function) {
 
-  c <- lapply(X, function(col) {
+  i <- 1
+  candidates <- list()
+  cnames <- colnames(X)
+
+  repeat {
+
+    if(i > ncol(X)) break
+
     r <- list()
+
+    col <- X[,i]
+
     # Do something different depending on data type
     if(is.numeric(col)) {
 
-      quantile.min <- stats::quantile(col, peeling.quantile, names = FALSE)
-      quantile.plus <- stats::quantile(col, 1 - peeling.quantile, names = FALSE)
+      quantiles <- stats::quantile(col, c(peeling.quantile, 1 - peeling.quantile) , names = FALSE)
+      quantile.min <- quantiles[1]
+      quantile.plus <- quantiles[2]
 
       idx.min <- col < quantile.min
       idx.plus <- col > quantile.plus
@@ -395,7 +406,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
         r <- c(r,
                list(
                  min = list(
-                   value = unname(quantile.min),
+                   value = quantile.min,
                    operator = ">=",
                    type = "numeric",
                    quality = quality.function(y[!idx.min]),
@@ -410,7 +421,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
         r <- c(r,
                list(
                  plus = list(
-                   value = unname(quantile.plus),
+                   value = quantile.plus,
                    operator = "<=",
                    type = "numeric",
                    quality = quality.function(y[!idx.plus]),
@@ -420,7 +431,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
                )
         )
       }
-
 
     } else if (is.logical(col)  ) {
 
@@ -486,12 +496,17 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
         return(NULL)
       })
     }
-    return(r)
 
-  })
-  # Remove empty elements from the list
-  c <- Filter(Negate(function(x) is.null(unlist(x))), c)
-  return(c)
+
+    if(length(r) > 0) {
+      candidates[[cnames[i]]] <- r
+    }
+
+    i <- i + 1
+
+  }
+
+  return(candidates)
 }
 
 #' @title Find optimal box candidate
