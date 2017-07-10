@@ -385,8 +385,8 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
     # Do something different depending on data type
     if(is.numeric(col)) {
 
-      quantile.min <- stats::quantile(col, peeling.quantile)
-      quantile.plus <- stats::quantile(col, 1 - peeling.quantile)
+      quantile.min <- stats::quantile(col, peeling.quantile, names = FALSE)
+      quantile.plus <- stats::quantile(col, 1 - peeling.quantile, names = FALSE)
 
       idx.min <- col < quantile.min
       idx.plus <- col > quantile.plus
