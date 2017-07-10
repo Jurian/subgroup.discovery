@@ -1,78 +1,88 @@
 library(subgroup.discovery)
 context("Patient Rule Induction Method")
 
-testthat::test_that("Test functionality on credit data set", {
+testthat::test_that("Test covering functionality on credit data set", {
 
   data(credit)
 
   X <- credit[,-6]
   y <- credit$class
 
-  p.train <- subgroup.discovery::prim.peel(X = X, y = y, peeling.quantile = 0.1, min.support = 0.4)
+  p.cov <- subgroup.discovery::prim.cover(X = X, y = y, peeling.quantile = 0.1, min.support = 0.4)
+
+  p.validate <- p.cov$covers[[1]]
+  p.train <- p.cov$covers[[1]]$peel.result
+  p.leftover <- p.cov$leftover
+
+  expect_is(p.cov, "prim.cover")
+  expect_is(p.validate, "prim.validate")
   expect_is(p.train, "prim.peel")
+  expect_is(p.leftover, "prim.cover.leftover")
 
-  rule <- subgroup.discovery::prim.superrule.index(p.train, X)
-  expect_is(rule, "logical")
-  expect_identical(rule, c(F, F, F, F, F, T, T, T, F, T))
-
+  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
 })
 
-testthat::test_that("Test functionality on credit data set using the formula interface", {
+testthat::test_that("Test covering functionality on credit data set, using the formula interface", {
 
   data(credit)
 
-  p.train <- subgroup.discovery::prim.peel(class ~ ., data = credit, peeling.quantile = 0.1, min.support = 0.4)
-  expect_is(p.train, "prim.peel")
+  p.cov <- subgroup.discovery::prim.cover(class ~ ., data = credit, peeling.quantile = 0.1, min.support = 0.4)
 
-  expect_is(p.train$formula, "formula")
-  expect_identical(p.train$formula, as.formula(class ~ .))
-
-  rule <- subgroup.discovery::prim.superrule.index(p.train, credit)
-  expect_is(rule, "logical")
-  expect_identical(rule, c(F, F, F, F, F, T, T, T, F, T))
-
-})
-
-testthat::test_that("Test the validating functionality on pima data set", {
-
-  data(pima)
-
-  X <- pima[,-9]
-  y <- pima$class
-
-  train <- sample(1:nrow(X), nrow(X) * 0.66)
-
-  p.train <- subgroup.discovery::prim.peel(X = X[train,], y = y[train], peeling.quantile = 0.05, min.support = 0.1)
-  expect_is(p.train, "prim.peel")
-
-  p.test <- subgroup.discovery::prim.validate(p.train, X[-train,], y[-train])
-  expect_is(p.test, "prim.validate")
-
-})
-
-testthat::test_that("Test the PRIM covering algorithm using the pima data set", {
-
-  data(pima)
-
-  X <- pima[,-9]
-  y <- pima$class
-
-  p.cov <- subgroup.discovery::prim.cover(X = X, y = y, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
+  p.validate <- p.cov$covers[[1]]
+  p.train <- p.cov$covers[[1]]$peel.result
+  p.leftover <- p.cov$leftover
 
   expect_is(p.cov, "prim.cover")
-  #expect_identical(length(p.cov$covers), 3)
-  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.N))))
+  expect_is(p.validate, "prim.validate")
+  expect_is(p.train, "prim.peel")
+  expect_is(p.leftover, "prim.cover.leftover")
+
+  expect_is(p.cov$formula, "formula")
+  expect_identical(p.cov$formula, as.formula(class ~ .))
+
+  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
+})
+
+testthat::test_that("Test covering functionality on pima data set", {
+
+  data(pima)
+
+  X <- pima[,-9]
+  y <- pima$class
+
+  p.cov <- subgroup.discovery::prim.cover(X = X, y = y, peeling.quantile = 0.05, min.support = 0.1)
+
+  p.validate <- p.cov$covers[[1]]
+  p.train <- p.cov$covers[[1]]$peel.result
+  p.leftover <- p.cov$leftover
+
+  expect_is(p.cov, "prim.cover")
+  expect_is(p.validate, "prim.validate")
+  expect_is(p.train, "prim.peel")
+  expect_is(p.leftover, "prim.cover.leftover")
+
+  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
 
 })
 
-testthat::test_that("Test the PRIM covering algorithm using the formula interface", {
+testthat::test_that("Test covering functionality on the pima data set, using the formula interface", {
 
   data(pima)
 
   p.cov <- subgroup.discovery::prim.cover(class ~ ., data = pima, peeling.quantile = 0.05, min.support = 0.1, max.boxes = 3)
 
+  p.validate <- p.cov$covers[[1]]
+  p.train <- p.cov$covers[[1]]$peel.result
+  p.leftover <- p.cov$leftover
+
   expect_is(p.cov, "prim.cover")
-  #expect_identical(length(p.cov$covers), 3)
-  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.N))))
+  expect_is(p.validate, "prim.validate")
+  expect_is(p.train, "prim.peel")
+  expect_is(p.leftover, "prim.cover.leftover")
+
+  expect_is(p.cov$formula, "formula")
+  expect_identical(p.cov$formula, as.formula(class ~ .))
+
+  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
 
 })

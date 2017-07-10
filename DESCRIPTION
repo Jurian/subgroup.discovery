@@ -14,4 +14,4 @@ RoxygenNote: 6.0.1
 URL: https://github.com/Jurian/subgroup.discovery
 BugReports: https://github.com/Jurian/subgroup.discovery/issues
 Date: 2017-06-15
-Suggests: testthat, data.table
+Suggests: testthat

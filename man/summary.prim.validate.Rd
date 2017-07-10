@@ -15,6 +15,9 @@
 
 \item{digits}{Optional setting to control nr of digits to round}
 }
+\value{
+Nothing, this function is called for its side-effects
+}
 \description{
 Summarize a PRIM test result object
 }

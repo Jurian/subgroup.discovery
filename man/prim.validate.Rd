@@ -17,6 +17,9 @@ prim.validate(peel.result, X, y)
 An S3 object of type prim.validate
 }
 \description{
+Validate the results taken from the PRIM peeling process
+}
+\details{
 This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
 }
 \author{

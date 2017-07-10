@@ -4,14 +4,9 @@
 \alias{prim.peel}
 \title{Bump hunting using the Patient Rule Induction Method}
 \usage{
-prim.peel(formula, data, X = NULL, y = NULL, peeling.quantile, min.support,
-  quality.function = mean)
+prim.peel(X, y, peeling.quantile, min.support, quality.function = mean)
 }
 \arguments{
-\item{formula}{Formula with a response and terms}
-
-\item{data}{Data frame to find rules in}
-
 \item{X}{Data frame to find rules in}
 
 \item{y}{Response vector, usually of type numeric}

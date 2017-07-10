@@ -2,10 +2,11 @@
 % Please edit documentation in R/prim.R
 \name{prim.diversify}
 \alias{prim.diversify}
-\title{PRIM main entrance}
+\title{PRIM diversify strategy}
 \usage{
 prim.diversify(formula, data, X = NULL, y = NULL, n, peeling.quantile,
-  min.support, train.fraction = 0.66, quality.function = mean)
+  min.support, train.fraction = 0.66, quality.function = mean,
+  plot = FALSE)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -25,9 +26,17 @@ prim.diversify(formula, data, X = NULL, y = NULL, n, peeling.quantile,
 \item{train.fraction}{Optional train-test split fraction used in validation, defaults to 0.66}
 
 \item{quality.function}{Optional setting for function to use for determining subset quality, defaults to mean}
+
+\item{plot}{Optional setting to plot intermediate results, defaults to false}
+}
+\value{
+An S3 object of type prim.diversify
 }
 \description{
-Temporary description
+Provide a (hopefully) diverse number of box definitions
+}
+\details{
+Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split.
 }
 \author{
 Jurian Baas

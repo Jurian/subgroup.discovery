@@ -11,6 +11,9 @@
 
 \item{...}{Optional arguments to pass on}
 }
+\value{
+Nothing, this function is called for its side-effects
+}
 \description{
 Plot an S3 object of class prim.peel
 }

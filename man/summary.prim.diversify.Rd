@@ -2,7 +2,7 @@
 % Please edit documentation in R/prim.R
 \name{summary.prim.diversify}
 \alias{summary.prim.diversify}
-\title{Summarize a PRIM cover diversify object}
+\title{Summarize a PRIM diversify object}
 \usage{
 \method{summary}{prim.diversify}(object, ..., round = TRUE, digits = 2)
 }
@@ -14,6 +14,9 @@
 \item{round}{Optional setting to disable rounding}
 
 \item{digits}{Optional setting to control nr of digits to round}
+}
+\value{
+Nothing, this function is called for its side-effects
 }
 \description{
 Summarize a PRIM diversify result object

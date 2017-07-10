@@ -1,96 +1,9 @@
 #-------------------------------------------------------------------------------------------#
-#################################### PRIM MAIN FUNCTIONS ####################################
+################################## PRIM INTERFACE FUNCTIONS #################################
 #-------------------------------------------------------------------------------------------#
 
 
-#' @description Peeling function for bump hunting using the Patient Rule Induction Method (PRIM).
-#' @title Bump hunting using the Patient Rule Induction Method
-#' @param formula Formula with a response and terms
-#' @param data Data frame to find rules in
-#' @param X Data frame to find rules in
-#' @param y Response vector, usually of type numeric
-#' @param peeling.quantile Quantile to peel off for numerical variables
-#' @param min.support Minimal size of a box to be valid, as a fraction
-#' @param quality.function Which function to use to determine the quality of a box, defaults to mean
-#' @return An S3 object of class prim.peel
-#' @author Jurian Baas
-#' @importFrom stats model.frame model.response
-#' @export
-prim.peel <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, quality.function = mean) {
-
-  using.formula <- is.null(X) & is.null(y)
-  # Use the formula interface
-  if(using.formula) {
-    if(!is.data.frame(data)) stop("Data argument is not a data frame, aborting...")
-
-    X <- stats::model.frame(formula = formula, data = data)
-    y <- stats::model.response(X)
-    X <- X[,-1]
-
-    if(is.null(y)) stop("Data has no response variable, aborting...")
-
-  } else {
-
-    if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
-    if(!is.vector(y)) stop("Parameter y has to be a vector")
-    if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
-  }
-
-  if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
-  if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
-  if(min.support <= 0) stop("Minimum support must be positive")
-  if(min.support >= 1) stop("Minimum support must be a fraction smaller than 1")
-
-  result <- list()
-  result$box.qualities <- quality.function(y)
-  result$supports <- 1
-
-  result$rule.names <- character()
-  result$rule.operators <- character()
-  result$rule.types <- character()
-  result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
-  result$quality.function <- quality.function
-  result$N <- nrow(X)
-  result$avg.quality <- quality.function(y)
-
-  repeat {
-
-    if(nrow(X) / result$N <= min.support) break
-
-    # Find box candidates
-    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, result$N, quality.function)
-
-    if(length(candidates) == 0) break
-
-    cf <- prim.candidates.best(candidates)
-
-    X <- X[-cf$idx,]
-    y <- y[-cf$idx]
-
-    result$box.qualities <- c(result$box.qualities, quality.function(y))
-    result$supports <- c(result$supports, length(y) / result$N)
-
-    result$rule.values <- c(result$rule.values, cf$value)
-    result$rule.names <- c(result$rule.names, cf$name)
-    result$rule.operators <- c(result$rule.operators, cf$operator)
-    result$rule.types <- c(result$rule.types, cf$type)
-  }
-
-  result$rule.names <- factor(result$rule.names, levels = colnames(X))
-  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
-  result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
-
-  class(result) <- "prim.peel"
-
-  result$superrule <- prim.condense.rules(result)
-  result$call <- match.call()
-
-  if(using.formula) result$formula <- formula
-
-  return(result)
-}
-
-#' @title PRIM covering algorithm
+#' @title PRIM covering strategy
 #' @description In bump hunting it is customary to follow a so-called covering strategy. This means that the same box construction (rule induction) algorithm is applied sequentially to subsets of the data.
 #' @param formula Formula with a response and terms
 #' @param data Data frame to find rules in
@@ -101,10 +14,13 @@ prim.peel <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.s
 #' @param train.fraction Train-test split fraction used in validation
 #' @param max.boxes Optional maximum number of boxes
 #' @param quality.function Optional setting for function to use for determining subset quality, defaults to mean
+#' @param plot Optional setting to plot intermediate results, defaults to false
+#' @return An S3 object of class prim.cover
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response
+#' @importFrom graphics plot par
 #' @export
-prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, train.fraction = 0.66, max.boxes = NA, quality.function = mean) {
+prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, train.fraction = 0.66, max.boxes = NA, quality.function = mean, plot = FALSE) {
 
   using.formula <- is.null(X) & is.null(y)
 
@@ -138,10 +54,11 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
   covers <- list()
 
   result <- list()
-  result$peeling.quantile = peeling.quantile
-  result$min.support = min.support
-  result$train.fraction = train.fraction
-  if(!is.na(max.boxes)) result$max.boxes = max.boxes
+  result$peeling.quantile <- peeling.quantile
+  result$min.support <- min.support
+  result$train.fraction <- train.fraction
+  result$quality.function <- quality.function
+  if(!is.na(max.boxes)) result$max.boxes <- max.boxes
   class(result) <- "prim.cover"
 
   y.quality <- quality.function(y)
@@ -158,10 +75,8 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
       p.leftover <- list()
       class(p.leftover) <- "prim.cover.leftover"
 
-      p.leftover$cov.N <- nrow(X)
       p.leftover$cov.support <- nrow(X)
-      p.leftover$cov.avg.quality <- quality.function(y)
-      p.leftover$cov.quality <- quality.function(y)
+      p.leftover$cov.overall.quality <- quality.function(y)
 
       result$leftover <- p.leftover
       break
@@ -172,19 +87,24 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
     p.train <- prim.peel(X = X[train,], y = y[train], peeling.quantile = peeling.quantile, min.support = min.support, quality.function = quality.function)
     p.validate <- prim.validate(p.train, X[-train,], y[-train])
 
-    idx <- prim.superrule.index(p.validate, X)
+    if(plot) {
+      graphics::par(mfrow = c(1,2))
+      graphics::plot(p.train)
+      graphics::plot(p.validate)
+    }
 
-    p.validate$cov.N <- nrow(X)
-    p.validate$cov.support <- sum(idx)
-    p.validate$cov.avg.quality <- quality.function(y)
-    p.validate$cov.quality <- quality.function(y[idx])
+    idx <- prim.match.rule(p.validate, X)
+
+    p.validate$cov.support <- nrow(X)
+    p.validate$cov.box.support <- sum(idx)
+    p.validate$cov.overall.quality <- quality.function(y)
+    p.validate$cov.box.quality <- quality.function(y[idx])
 
     X <- X[!idx,]
     y <- y[!idx]
     box.nr <- box.nr + 1
 
     covers <- c(covers, list(p.validate))
-
   }
 
   result$covers <- covers
@@ -194,8 +114,9 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
   return(result)
 }
 
-#' @title PRIM main entrance
-#' @description Temporary description
+#' @title PRIM diversify strategy
+#' @description Provide a (hopefully) diverse number of box definitions
+#' @details Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split.
 #' @param formula Formula with a response and terms
 #' @param data Data frame to find rules in
 #' @param X Optionally instead of using a formula: Data frame to find rules in
@@ -205,10 +126,13 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 #' @param min.support Minimal size of a box to be valid
 #' @param train.fraction Optional train-test split fraction used in validation, defaults to 0.66
 #' @param quality.function Optional setting for function to use for determining subset quality, defaults to mean
+#' @param plot Optional setting to plot intermediate results, defaults to false
+#' @return An S3 object of type prim.diversify
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response
+#' @importFrom graphics plot par
 #' @export
-prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, train.fraction = 0.66, quality.function = mean) {
+prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, train.fraction = 0.66, quality.function = mean, plot = FALSE) {
 
   using.formula <- is.null(X) & is.null(y)
 
@@ -243,6 +167,10 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
   result$peeling.quantile = peeling.quantile
   result$min.support = min.support
   result$train.fraction = train.fraction
+  result$quality.function <- quality.function
+
+  result$support <- nrow(X)
+  result$overall.quality <- quality.function(y)
 
   for(i in 1:n) {
 
@@ -251,12 +179,16 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
     p.train <- prim.peel(X = X[train,], y = y[train], peeling.quantile = peeling.quantile, min.support = min.support, quality.function = quality.function)
     p.validate <- prim.validate(p.train, X[-train,], y[-train])
 
-    idx <- prim.superrule.index(p.validate, X)
+    if(plot) {
+      graphics::par(mfrow = c(1,2))
+      graphics::plot(p.train)
+      graphics::plot(p.validate)
+    }
 
-    p.validate$att.N <- nrow(X)
-    p.validate$att.support <- sum(idx)
-    p.validate$att.avg.quality <- quality.function(y)
-    p.validate$att.quality <- quality.function(y[idx])
+    idx <- prim.match.rule(p.validate, X)
+
+    p.validate$att.box.support <- sum(idx)
+    p.validate$att.box.quality <- quality.function(y[idx])
 
     attempts <- c(attempts, list(p.validate))
   }
@@ -276,11 +208,167 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
 
 
 #-------------------------------------------------------------------------------------------#
-################################### PRIM HELPER FUNCTIONS ###################################
+################################### PRIM PRIVATE FUNCTIONS ##################################
 #-------------------------------------------------------------------------------------------#
 
-#' @title  Find all box candidates for a given (sub)set
-#' @description This function goes through all columns of the dataset and tries to findbox candidates based on the quantile peeling.quantile and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
+#' @title Bump hunting using the Patient Rule Induction Method
+#' @description Peeling function for bump hunting using the Patient Rule Induction Method (PRIM).
+#' @param X Data frame to find rules in
+#' @param y Response vector, usually of type numeric
+#' @param peeling.quantile Quantile to peel off for numerical variables
+#' @param min.support Minimal size of a box to be valid, as a fraction
+#' @param quality.function Which function to use to determine the quality of a box, defaults to mean
+#' @return An S3 object of class prim.peel
+#' @author Jurian Baas
+#' @importFrom stats model.frame model.response
+prim.peel <- function(X, y, peeling.quantile, min.support, quality.function = mean) {
+
+
+  if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
+  if(!is.vector(y)) stop("Parameter y has to be a vector")
+  if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
+  if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
+  if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
+  if(min.support <= 0) stop("Minimum support must be positive")
+  if(min.support >= 1) stop("Minimum support must be a fraction smaller than 1")
+
+  result <- list()
+  result$box.qualities <- quality.function(y)
+  result$supports <- 1
+
+  result$rule.names <- character()
+  result$rule.operators <- character()
+  result$rule.types <- character()
+  result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
+  result$quality.function <- quality.function
+  result$peel.support <- nrow(X)
+  result$peel.overall.quality <- quality.function(y)
+
+  repeat {
+
+    if(nrow(X) / result$peel.support <= min.support) break
+
+    # Find box candidates
+    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, result$peel.support, quality.function)
+
+    if(length(candidates) == 0) break
+
+    cf <- prim.candidates.best(candidates)
+
+    X <- X[-cf$idx,]
+    y <- y[-cf$idx]
+
+    result$box.qualities <- c(result$box.qualities, quality.function(y))
+    result$supports <- c(result$supports, length(y) / result$peel.support)
+
+    result$rule.values <- c(result$rule.values, cf$value)
+    result$rule.names <- c(result$rule.names, cf$name)
+    result$rule.operators <- c(result$rule.operators, cf$operator)
+    result$rule.types <- c(result$rule.types, cf$type)
+  }
+
+  result$rule.names <- factor(result$rule.names, levels = colnames(X))
+  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
+  result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
+
+  class(result) <- "prim.peel"
+
+  result$superrule <- prim.condense.rules(result)
+  result$call <- match.call()
+
+  return(result)
+}
+
+#' @title Bump hunting using the Patient Rule Induction Method
+#' @description Validate the results taken from the PRIM peeling process
+#' @details This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
+#' @param peel.result An S3 object of class prim.peel
+#' @param X A data frame with at least those columns that were used in creating the prim.peel S3 object
+#' @param y Response vector, usually of type numeric
+#' @return An S3 object of type prim.validate
+#' @author Jurian Baas
+prim.validate <- function(peel.result, X, y) {
+
+  if(class(peel.result) != "prim.peel") {
+    stop("Supplied argument is not of class prim.peel, aborting...")
+  }
+
+  if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
+  if(!is.vector(y)) stop("Parameter y has to be a vector")
+  if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
+
+  quality.function <- peel.result$quality.function
+
+  i <- 1
+
+  result <- list()
+  class(result) <- "prim.validate"
+  result$box.qualities <- quality.function(y)
+  result$supports <- 1
+  result$redundant <- integer()
+  result$rule.names <- character()
+  result$rule.operators <- character()
+  result$rule.types <- character()
+  result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
+  result$quality.function <- quality.function
+  result$validate.support <- nrow(X)
+  result$validate.overall.quality <- quality.function(y)
+  result$peel.result <- peel.result
+
+  repeat {
+
+    # Stop if there are no more boxes
+    if(i > length(peel.result$rule.names)) break
+
+    rule.info <- list(
+      name = as.character(peel.result$rule.names[i]),
+      operator = as.character(peel.result$rule.operators[i]),
+      value = peel.result$rule.values[i],
+      type = as.character(peel.result$rule.types[i])
+    )
+
+    rule <- paste( rule.info$name, rule.info$operator, rule.info$value)
+    idx <- !with(X, eval(parse(text = rule)))
+
+    # Check if this rule has any observations in the test data
+    if(sum(idx) > 0) {
+
+      X <- X[!idx,]
+      y <- y[!idx]
+
+      result$box.qualities <- c(result$box.qualities, quality.function(y))
+      result$supports <- c(result$supports, length(y) / result$validate.support)
+
+      result$rule.values <- c(result$rule.values, rule.info$value)
+      result$rule.names <- c(result$rule.names, rule.info$name)
+      result$rule.operators <- c(result$rule.operators, rule.info$operator)
+      result$rule.types <- c(result$rule.types, rule.info$type)
+
+    } else {
+
+      result$redundant <- c(result$redundant, i)
+
+    }
+
+    # This box could have all the remaining observations, no need to iterate further
+    if(nrow(X) == 0) break
+
+    i <- i + 1
+  }
+
+  result$rule.names <- factor(result$rule.names, levels = colnames(X))
+  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
+  result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
+
+  result$superrule <- prim.condense.rules(result)
+  result$call <- match.call()
+
+  return(result)
+}
+
+#' @title PRIM find split candidates
+#' @description Find all box candidates for a given (sub)set
+#' @details This function goes through all columns of the dataset and tries to findbox candidates based on the quantile peeling.quantile and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
 #' @param X Data frame with observations (may be a subset of original data)
 #' @param y Dependent variable, usually a numeric vector
 #' @param peeling.quantile Quantile to peel off
@@ -440,14 +528,13 @@ prim.candidates.best <- function(candidates) {
   return(best)
 }
 
-#' @description Generate a subset of the data using the rules in the supplied prim S3 object
-#' @title PRIM subset creator
+#' @title Create box matching index
+#' @description Generate a logical vector in which elements are true iff applying the rule to a record evaluates to true.
 #' @param prim.object An S3 object of class prim.peel or prim.validate result
 #' @param X A data frame with at least those columns that were used in creating the prim S3 object
-#' @return A subset of X
+#' @return A logical index of matching records
 #' @author Jurian Baas
-#' @export
-prim.superrule.index <- function(prim.object, X) {
+prim.match.rule <- function(prim.object, X) {
 
   if(class(prim.object) != "prim.peel" & class(prim.object) != "prim.validate") {
     stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
@@ -455,94 +542,9 @@ prim.superrule.index <- function(prim.object, X) {
   return(with(X, eval(parse(text = paste0(prim.object$superrule, collapse = " & ")))))
 }
 
-#' @description This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
-#' @title Bump hunting using the Patient Rule Induction Method
-#' @param peel.result An S3 object of class prim.peel
-#' @param X A data frame with at least those columns that were used in creating the prim.peel S3 object
-#' @param y Response vector, usually of type numeric
-#' @return An S3 object of type prim.validate
-#' @author Jurian Baas
-#' @export
-prim.validate <- function(peel.result, X, y) {
-
-  if(class(peel.result) != "prim.peel") {
-    stop("Supplied argument is not of class prim.peel, aborting...")
-  }
-
-  if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
-  if(!is.vector(y)) stop("Parameter y has to be a vector")
-  if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
-
-  quality.function <- peel.result$quality.function
-
-  i <- 1
-
-  result <- list()
-  class(result) <- "prim.validate"
-  result$box.qualities <- quality.function(y)
-  result$supports <- 1
-  result$redundant <- integer()
-  result$rule.names <- character()
-  result$rule.operators <- character()
-  result$rule.types <- character()
-  result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
-  result$quality.function <- quality.function
-  result$N <- nrow(X)
-  result$avg.quality <- quality.function(y)
-
-  repeat {
-
-    # Stop if there are no more boxes
-    if(i > length(peel.result$rule.names)) break
-
-    rule.info <- list(
-      name = as.character(peel.result$rule.names[i]),
-      operator = as.character(peel.result$rule.operators[i]),
-      value = peel.result$rule.values[i],
-      type = as.character(peel.result$rule.types[i])
-    )
-
-    rule <- paste( rule.info$name, rule.info$operator, rule.info$value)
-    idx <- !with(X, eval(parse(text = rule)))
-
-    # Check if this rule has any observations in the test data
-    if(sum(idx) > 0) {
-
-      X <- X[!idx,]
-      y <- y[!idx]
-
-      result$box.qualities <- c(result$box.qualities, quality.function(y))
-      result$supports <- c(result$supports, length(y) / result$N)
-
-      result$rule.values <- c(result$rule.values, rule.info$value)
-      result$rule.names <- c(result$rule.names, rule.info$name)
-      result$rule.operators <- c(result$rule.operators, rule.info$operator)
-      result$rule.types <- c(result$rule.types, rule.info$type)
-
-    } else {
-
-      result$redundant <- c(result$redundant, i)
-
-    }
-
-    # This box could have all the remaining observations, no need to iterate further
-    if(nrow(X) == 0) break
-
-    i <- i + 1
-  }
-
-  result$rule.names <- factor(result$rule.names, levels = colnames(X))
-  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
-  result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
-
-  result$superrule <- prim.condense.rules(result)
-  result$call <- match.call()
-
-  return(result)
-}
-
-#' @description This function condenses the many (redundant) rules of an S3 object of class prim.peel or prim.validate to a single rule.
 #' @title Condense multiple (redundant) rules
+#' @details This function condenses the many (redundant) rules of an S3 object of class prim.peel or prim.validate to a single rule.
+#' @description This function condenses the many (redundant) rules of an S3 object of class prim.peel or prim.validate to a single rule.
 #' @param prim.object An S3 object of class prim.peel or prim.validate
 #' @return The condensed rule as a single string
 #' @author Jurian Baas
@@ -584,16 +586,56 @@ prim.condense.rules <- function(prim.object) {
 
 
 
+#-------------------------------------------------------------------------------------------#
+################################### S3 PREDICT FUNCTIONS ####################################
+#-------------------------------------------------------------------------------------------#
+
+#' @title Predict method for PRIM Cover Fits
+#' @description Predicted values based on the PRIM cover object
+#' @param object Object of class prim.cover
+#' @param ...  Further arguments passed to or from other methods
+#' @param newdata A data frame in which to look for variables with which to predict.
+#' @return Depends on the quality function used. In the case of mean(.), the mean of the target variable of the first matching box.
+#' @author Jurian Baas
+#' @export
+predict.prim.cover <- function(object, newdata, ... ) {
+
+  i <- 1
+
+  y.hat <- as.numeric(rep(NA, nrow(newdata)))
+
+  repeat {
+
+    if(all(!is.na(y.hat))) break
+    if(i > length(object$covers)) break
+
+    cover <- object$covers[[i]]
+
+    idx <- prim.match.rule(cover, newdata)
+
+    y.hat[idx & is.na(y.hat)] <- cover$cov.box.quality
+
+    i <- i + 1
+  }
+
+  y.hat[is.na(y.hat)] <- object$leftover$cov.overall.quality
+
+  return(y.hat)
+}
+
+
+
 
 
 #-------------------------------------------------------------------------------------------#
 ################################### S3 PLOTTING FUNCTIONS ###################################
 #-------------------------------------------------------------------------------------------#
 
-#' @description Plot an S3 object of class prim.peel
 #' @title Plot PRIM peel result
+#' @description Plot an S3 object of class prim.peel
 #' @param x An S3 object of class prim.peel
 #' @param ... Optional arguments to pass on
+#' @return Nothing, this function is called for its side-effects
 #' @author Jurian Baas
 #' @export
 #' @importFrom graphics par plot points text
@@ -622,10 +664,11 @@ plot.prim.peel <- function(x, ...) {
     cex = 0.7, pos = 4, col = "orangered4", font = 2)
 }
 
-#' @description Plot an S3 object of class prim.validate
 #' @title Plot PRIM test result
+#' @description Plot an S3 object of class prim.validate
 #' @param x An S3 object of class prim.validate
 #' @param ... Optional arguments to pass on
+#' @return Nothing, this function is called for its side-effects
 #' @author Jurian Baas
 #' @export
 #' @importFrom graphics par plot points text
@@ -654,19 +697,21 @@ plot.prim.validate <- function(x, ...) {
     cex = 0.7, pos = 4, col = "orangered4", font = 2)
 }
 
-#' @description Plot an S3 object of class prim.cover
 #' @title Plot PRIM cover result
+#' @description Plot an S3 object of class prim.cover
 #' @param x An S3 object of class prim.cover
 #' @param ... Optional arguments to pass on
+#' @return Nothing, this function is called for its side-effects
 #' @author Jurian Baas
 #' @export
 #' @importFrom graphics par plot lines points text
 plot.prim.cover <- function(x, ...) {
 
   dat <- data.frame(t(sapply(x$covers, function(c) {
-    c( supports = c$cov.support / c$cov.N,
-       box.qualities = c$cov.quality)
+    c( supports = c$cov.box.support / c$cov.support,
+       box.qualities = c$cov.box.quality)
   })))
+
   graphics::par(bty = "l")
   graphics::plot (
     dat$supports,
@@ -693,17 +738,18 @@ plot.prim.cover <- function(x, ...) {
     cex = 0.7, pos = 2, col = "orangered4", font = 2)
 }
 
-#' @description Plot an S3 object of class prim.diversify
 #' @title Plot PRIM diversify result
+#' @description Plot an S3 object of class prim.diversify
 #' @param x An S3 object of class prim.diversify
 #' @param ... Optional arguments to pass on
+#' @return Nothing, this function is called for its side-effects
 #' @author Jurian Baas
 #' @export
 #' @importFrom graphics par plot points text
 plot.prim.diversify <- function(x, ...) {
   dat <- data.frame(t(sapply(x$attempts, function(a) {
-    c( supports = a$att.support / a$att.N,
-       box.qualities = a$att.quality)
+    c( supports = a$att.box.support / x$support,
+       box.qualities = a$att.box.quality)
   })))
   graphics::par(bty = "l")
   graphics::plot (
@@ -741,38 +787,28 @@ plot.prim.diversify <- function(x, ...) {
 #' @param round Optional setting to disable rounding
 #' @param digits Optional setting to control nr of digits to round
 #' @author Jurian Baas
+#' @return Nothing, this function is called for its side-effects
 #' @export
 summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
+
+  if(!round)  digits = 7
+
   cat("  ======================================", "\n")
   cat("  ========== PRIM PEEL RESULT ==========", "\n")
   cat("  ======================================", "\n")
   cat("\n")
   best.box.idx <- which.max(object$box.qualities)
 
-  if(round) {
+  cat("  Set size: ", object$peel.support, "\n")
+  cat("  Set quality: ", round(object$peel.overall.quality, digits), "\n")
+  cat("\n")
+  cat("  ============== BEST BOX ==============", "\n")
+  cat("  Box quality: ", round(object$box.qualities[best.box.idx], digits), "(", round(object$box.qualities[best.box.idx] / object$peel.overall.quality, digits), ") \n")
+  cat("  Box support: ", round(object$supports[best.box.idx], digits), " (", object$supports[best.box.idx] * object$peel.support, ") \n")
+  cat("\n")
+  cat("  ================ RULES ===============", "\n")
+  cat(" ", paste0(object$superrule, collapse = "\n  "))
 
-    cat("  Original set size: ", object$N, "\n")
-    cat("  Original set quality: ", round(object$avg.quality, digits), "\n")
-    cat("\n")
-    cat("  ============== BEST BOX ==============", "\n")
-    cat("  Box quality: ", round(object$box.qualities[best.box.idx], digits), "(", round(object$box.qualities[best.box.idx] / object$avg.quality, digits), ") \n")
-    cat("  Box support: ", round(object$supports[best.box.idx], digits), " (", object$supports[best.box.idx] * object$N, ") \n")
-    cat("\n")
-    cat("  ================ RULES ===============", "\n")
-    cat(" ", paste0(object$superrule, collapse = "\n  "))
-
-  } else {
-
-    cat("  Original set size: ", object$N, "\n")
-    cat("  Original set quality: ", object$avg.quality, "\n")
-    cat("\n")
-    cat("  ============== BEST BOX ==============", "\n")
-    cat("  Box quality: ", object$box.qualities[best.box.idx], "\n")
-    cat("  Box support: ", object$supports[best.box.idx], " (", object$supports[best.box.idx] * object$N, ") \n")
-    cat("\n")
-    cat("  ================ RULES ===============", "\n")
-    cat(" ", paste0(object$superrule, collapse = "\n  "))
-  }
 }
 
 #' @title Summarize a PRIM test result object
@@ -782,37 +818,28 @@ summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
 #' @param round Optional setting to disable rounding
 #' @param digits Optional setting to control nr of digits to round
 #' @author Jurian Baas
+#' @return Nothing, this function is called for its side-effects
 #' @export
 summary.prim.validate <- function(object, ..., round = TRUE, digits = 2) {
+
+  if(!round)  digits = 7
+
   cat("  ======================================", "\n")
   cat("  ========== PRIM TEST RESULT ==========", "\n")
   cat("  ======================================", "\n")
   cat("\n")
   best.box.idx <- which.max(object$box.qualities)
-  if(round) {
 
-    cat("  Original set size: ", object$N, "\n")
-    cat("  Original set quality: ", round(object$avg.quality, digits), "\n")
-    cat("\n")
-    cat("  ============== BEST BOX ==============", "\n")
-    cat("  Box quality: ", round(object$box.qualities[best.box.idx], digits), "(", round(object$box.qualities[best.box.idx] / object$avg.quality, digits), ") \n")
-    cat("  Box support: ", round(object$supports[best.box.idx], digits), " (", object$supports[best.box.idx] * object$N, ") \n")
-    cat("\n")
-    cat("  ================ RULES ===============", "\n")
-    cat(" ", paste0(object$superrule, collapse = "\n  "))
+  cat("  Original set size: ", object$validate.support, "\n")
+  cat("  Original set quality: ", round(object$validate.overall.quality, digits), "\n")
+  cat("\n")
+  cat("  ============== BEST BOX ==============", "\n")
+  cat("  Box quality: ", round(object$box.qualities[best.box.idx], digits), "(", round(object$box.qualities[best.box.idx] / object$validate.overall.quality, digits), ") \n")
+  cat("  Box support: ", round(object$supports[best.box.idx], digits), " (", object$supports[best.box.idx] * object$validate.support, ") \n")
+  cat("\n")
+  cat("  ================ RULES ===============", "\n")
+  cat(" ", paste0(object$superrule, collapse = "\n  "))
 
-  } else {
-
-    cat("  Original set size: ", object$N, "\n")
-    cat("  Original set quality: ", object$avg.quality, "\n")
-    cat("\n")
-    cat("  ============== BEST BOX ==============", "\n")
-    cat("  Box quality: ", object$box.qualities[best.box.idx], "(", object$box.qualities[best.box.idx] / object$avg.quality, ") \n")
-    cat("  Box support: ", object$supports[best.box.idx], " (", object$supports[best.box.idx] * object$N, ") \n")
-    cat("\n")
-    cat("  ================ RULES ===============", "\n")
-    cat(" ", paste0(object$superrule, collapse = "\n  "))
-  }
 }
 
 #' @title Summarize a PRIM cover result object
@@ -822,8 +849,11 @@ summary.prim.validate <- function(object, ..., round = TRUE, digits = 2) {
 #' @param round Optional setting to disable rounding
 #' @param digits Optional setting to control nr of digits to round
 #' @author Jurian Baas
+#' @return Nothing, this function is called for its side-effects
 #' @export
 summary.prim.cover <- function(object, ..., round = TRUE, digits = 2) {
+
+  if(!round)  digits = 7
 
   cat("  ======================================", "\n")
   cat("  ========== PRIM COVER RESULT =========", "\n")
@@ -834,20 +864,16 @@ summary.prim.cover <- function(object, ..., round = TRUE, digits = 2) {
   cat("  |  Train/test split:", object$train.fraction, "\n")
   cat("\n")
 
-  if(!round) {
-    digits = 7
-  }
-
   for(i in 1:length(object$covers)) {
     x <- object$covers[[i]]
     cat("\n")
     cat("  ======================================", "\n")
     cat("  ============== COVER", i,"===============", "\n")
-    cat("  |  Cover set size: ", x$cov.N, "\n")
-    cat("  |  Cover set quality: ", round(x$cov.avg.quality, digits), "\n")
+    cat("  |  Cover set size: ", x$cov.support, "\n")
+    cat("  |  Cover set quality: ", round(x$cov.overall.quality, digits), "\n")
     cat("  |\n")
-    cat("  |  Box quality: ", round(x$cov.quality, digits), "(", round(x$cov.quality / x$cov.avg.quality, digits), ") \n")
-    cat("  |  Box support: ", round(x$cov.support / x$cov.N, digits) , " (", x$cov.support, ") \n")
+    cat("  |  Box relative quality: ", round(x$cov.box.quality, digits), "(", round(x$cov.box.quality / x$cov.overall.quality, digits), ") \n")
+    cat("  |  Box relative support: ", round(x$cov.box.support / x$cov.support, digits) , " (", x$cov.box.support, ") \n")
     cat("\n")
     cat("  ================ RULES ===============", "\n")
     cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
@@ -860,24 +886,25 @@ summary.prim.cover <- function(object, ..., round = TRUE, digits = 2) {
   cat("\n")
   cat("  ======================================", "\n")
   cat("  ============== LEFTOVER ==============", "\n")
-  cat("  |  Cover set size: ", x$cov.N, "\n")
-  cat("  |  Cover set quality: ", round(x$cov.avg.quality, digits), "\n")
-  cat("  |\n")
-  cat("  |  Box quality: ", round(x$cov.quality, digits), "(", round(x$cov.quality / x$cov.avg.quality, digits), ") \n")
-  cat("  |  Box support: ", round(x$cov.support / x$cov.N, digits) , " (", x$cov.support, ") \n")
+  cat("  |  Cover set size: ", x$cov.support, "\n")
+  cat("  |  Cover set quality: ", round(x$cov.overall.quality, digits), "\n")
   cat("\n","\n","\n")
 
 }
 
-#' @title Summarize a PRIM cover diversify object
+#' @title Summarize a PRIM diversify object
 #' @description Summarize a PRIM diversify result object
 #' @param object An S3 object of class prim.diversify
 #' @param ... Optional arguments to pass on
 #' @param round Optional setting to disable rounding
 #' @param digits Optional setting to control nr of digits to round
 #' @author Jurian Baas
+#' @return Nothing, this function is called for its side-effects
 #' @export
 summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
+
+  if(!round) digits = 7
+
   cat("  ======================================", "\n")
   cat("  ======== PRIM DIVERSIFY RESULT =======", "\n")
   cat("  ======================================", "\n")
@@ -885,23 +912,18 @@ summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
   cat("  |  Peeling quantile:", object$peeling.quantile, "\n")
   cat("  |  Min support:", object$min.support, "\n")
   cat("  |  Train/test split:", object$train.fraction, "\n")
+  cat("  |\n")
+  cat("  |  Set support: ", object$support, "\n")
+  cat("  |  Set quality: ", round(object$overall.quality, digits), "\n")
   cat("\n")
-
-  if(!round) {
-    digits = 7
-  }
-
 
   for(i in 1:length(object$attempts)) {
     x <- object$attempts[[i]]
     cat("\n")
     cat("  ======================================", "\n")
     cat("  ============= ATTEMPT", i,"==============", "\n")
-    cat("  |  Cover set size: ", x$att.N, "\n")
-    cat("  |  Cover set quality: ", round(x$att.avg.quality, digits), "\n")
-    cat("  |\n")
-    cat("  |  Box quality: ", round(x$att.quality, digits), "(", round(x$att.quality / x$att.avg.quality, digits), ") \n")
-    cat("  |  Box support: ", round(x$att.support / x$att.N, digits) , " (", x$att.support, ") \n")
+    cat("  |  Box quality: ", round(x$att.box.quality, digits), "(", round(x$att.box.quality / object$overall.quality, digits), ") \n")
+    cat("  |  Box support: ", round(x$att.box.support / object$support, digits) , " (", x$att.box.support, ") \n")
     cat("\n")
     cat("  ================ RULES ===============", "\n")
     cat("  | ", paste0(x$superrule, collapse = "\n  |  "))

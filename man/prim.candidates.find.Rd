@@ -2,7 +2,7 @@
 % Please edit documentation in R/prim.R
 \name{prim.candidates.find}
 \alias{prim.candidates.find}
-\title{Find all box candidates for a given (sub)set}
+\title{PRIM find split candidates}
 \usage{
 prim.candidates.find(X, y, peeling.quantile, min.support, N, quality.function)
 }
@@ -23,6 +23,9 @@ prim.candidates.find(X, y, peeling.quantile, min.support, N, quality.function)
 A list of potential boxes
 }
 \description{
+Find all box candidates for a given (sub)set
+}
+\details{
 This function goes through all columns of the dataset and tries to findbox candidates based on the quantile peeling.quantile and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
 }
 \author{

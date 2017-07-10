@@ -15,6 +15,9 @@ The condensed rule as a single string
 \description{
 This function condenses the many (redundant) rules of an S3 object of class prim.peel or prim.validate to a single rule.
 }
+\details{
+This function condenses the many (redundant) rules of an S3 object of class prim.peel or prim.validate to a single rule.
+}
 \author{
 Jurian Baas
 }

@@ -2,10 +2,11 @@
 % Please edit documentation in R/prim.R
 \name{prim.cover}
 \alias{prim.cover}
-\title{PRIM covering algorithm}
+\title{PRIM covering strategy}
 \usage{
 prim.cover(formula, data, X = NULL, y = NULL, peeling.quantile, min.support,
-  train.fraction = 0.66, max.boxes = NA, quality.function = mean)
+  train.fraction = 0.66, max.boxes = NA, quality.function = mean,
+  plot = FALSE)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -25,6 +26,11 @@ prim.cover(formula, data, X = NULL, y = NULL, peeling.quantile, min.support,
 \item{max.boxes}{Optional maximum number of boxes}
 
 \item{quality.function}{Optional setting for function to use for determining subset quality, defaults to mean}
+
+\item{plot}{Optional setting to plot intermediate results, defaults to false}
+}
+\value{
+An S3 object of class prim.cover
 }
 \description{
 In bump hunting it is customary to follow a so-called covering strategy. This means that the same box construction (rule induction) algorithm is applied sequentially to subsets of the data.
