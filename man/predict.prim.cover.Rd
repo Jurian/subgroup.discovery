@@ -14,7 +14,7 @@
 \item{...}{Further arguments passed to or from other methods}
 }
 \value{
-Depends on the quality function used. In the case of mean(.), the mean of the target variable of the first matching box.
+Depends on the quality function used. In the case of base::mean, the mean of the target variable of the first matching box.
 }
 \description{
 Predicted values based on the PRIM cover object

@@ -20,7 +20,7 @@
 #' @importFrom stats model.frame model.response
 #' @importFrom graphics plot par
 #' @export
-prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, train.fraction = 0.66, max.boxes = NA, quality.function = mean, plot = FALSE) {
+prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
 
   using.formula <- is.null(X) & is.null(y)
 
@@ -132,7 +132,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 #' @importFrom stats model.frame model.response
 #' @importFrom graphics plot par
 #' @export
-prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, train.fraction = 0.66, quality.function = mean, plot = FALSE) {
+prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
 
   using.formula <- is.null(X) & is.null(y)
 
@@ -221,7 +221,7 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
 #' @return An S3 object of class prim.peel
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response
-prim.peel <- function(X, y, peeling.quantile, min.support, quality.function = mean) {
+prim.peel <- function(X, y, peeling.quantile, min.support, quality.function = base::mean) {
 
 
   if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
@@ -595,7 +595,7 @@ prim.condense.rules <- function(prim.object) {
 #' @param object Object of class prim.cover
 #' @param ...  Further arguments passed to or from other methods
 #' @param newdata A data frame in which to look for variables with which to predict.
-#' @return Depends on the quality function used. In the case of mean(.), the mean of the target variable of the first matching box.
+#' @return Depends on the quality function used. In the case of base::mean, the mean of the target variable of the first matching box.
 #' @author Jurian Baas
 #' @export
 predict.prim.cover <- function(object, newdata, ... ) {

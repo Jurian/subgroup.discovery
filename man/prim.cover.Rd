@@ -5,7 +5,7 @@
 \title{PRIM covering strategy}
 \usage{
 prim.cover(formula, data, X = NULL, y = NULL, peeling.quantile, min.support,
-  train.fraction = 0.66, max.boxes = NA, quality.function = mean,
+  train.fraction = 0.66, max.boxes = NA, quality.function = base::mean,
   plot = FALSE)
 }
 \arguments{

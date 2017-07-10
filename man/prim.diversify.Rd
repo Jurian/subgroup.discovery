@@ -5,7 +5,7 @@
 \title{PRIM diversify strategy}
 \usage{
 prim.diversify(formula, data, X = NULL, y = NULL, n, peeling.quantile,
-  min.support, train.fraction = 0.66, quality.function = mean,
+  min.support, train.fraction = 0.66, quality.function = base::mean,
   plot = FALSE)
 }
 \arguments{
