@@ -5,8 +5,8 @@
 \title{PRIM diversify strategy}
 \usage{
 prim.diversify(formula, data, X = NULL, y = NULL, n, peeling.quantile,
-  min.support, train.fraction = 0.66, quality.function = base::mean,
-  plot = FALSE)
+  min.support, max.peel = 0.1, train.fraction = 0.66,
+  quality.function = base::mean, plot = FALSE)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -22,6 +22,8 @@ prim.diversify(formula, data, X = NULL, y = NULL, n, peeling.quantile,
 \item{peeling.quantile}{Quantile to peel off for numerical variables}
 
 \item{min.support}{Minimal size of a box to be valid}
+
+\item{max.peel}{Maximal size of a peel, as a fraction. Defaults to 0.1}
 
 \item{train.fraction}{Optional train-test split fraction used in validation, defaults to 0.66}
 

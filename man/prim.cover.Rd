@@ -5,8 +5,8 @@
 \title{PRIM covering strategy}
 \usage{
 prim.cover(formula, data, X = NULL, y = NULL, peeling.quantile, min.support,
-  train.fraction = 0.66, max.boxes = NA, quality.function = base::mean,
-  plot = FALSE)
+  max.peel = 0.1, train.fraction = 0.66, max.boxes = NA,
+  quality.function = base::mean, plot = FALSE)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -21,7 +21,9 @@ prim.cover(formula, data, X = NULL, y = NULL, peeling.quantile, min.support,
 
 \item{min.support}{Minimal size of a box to be valid}
 
-\item{train.fraction}{Train-test split fraction used in validation}
+\item{max.peel}{Maximal size of a peel, as a fraction. Defaults to 0.1}
+
+\item{train.fraction}{Train-test split fraction used in validation, defaults to 0.66}
 
 \item{max.boxes}{Optional maximum number of boxes}
 

@@ -4,7 +4,7 @@
 \alias{prim.candidates.find}
 \title{PRIM find split candidates}
 \usage{
-prim.candidates.find(X, y, peeling.quantile, min.support, support,
+prim.candidates.find(X, y, peeling.quantile, min.support, max.peel, support,
   quality.function)
 }
 \arguments{
@@ -15,6 +15,8 @@ prim.candidates.find(X, y, peeling.quantile, min.support, support,
 \item{peeling.quantile}{Quantile to peel off}
 
 \item{min.support}{Minimal size of a box}
+
+\item{max.peel}{Maximal size of a peel}
 
 \item{support}{Support of subset}
 
