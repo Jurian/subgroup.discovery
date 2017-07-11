@@ -11,7 +11,8 @@
 #' @param y Optionally instead of using a formula: Response vector, usually of type numeric
 #' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
-#' @param train.fraction Train-test split fraction used in validation
+#' @param max.peel Maximal size of a peel, as a fraction. Defaults to 0.1
+#' @param train.fraction Train-test split fraction used in validation, defaults to 0.66
 #' @param max.boxes Optional maximum number of boxes
 #' @param quality.function Optional setting for function to use for determining subset quality, defaults to mean
 #' @param plot Optional setting to plot intermediate results, defaults to false
@@ -20,7 +21,7 @@
 #' @importFrom stats model.frame model.response
 #' @importFrom graphics plot par
 #' @export
-prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
+prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
 
   using.formula <- is.null(X) & is.null(y)
 
@@ -39,6 +40,14 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
     if(!is.data.frame(X)) stop("Parameter X has to be a data frame")
     if(!is.vector(y)) stop("Parameter y has to be a vector")
     if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
+
+    # Remove rows with NA values
+    test.complete <- complete.cases(X)
+    if(!all(test.complete)) {
+      warning("Incomplete cases found in data, removing...")
+      X <- X[test.complete,]
+      y <- y[test.complete]
+    }
   }
 
   if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
@@ -84,12 +93,12 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
-    p.train <- prim.peel(X = X[train,], y = y[train], peeling.quantile = peeling.quantile, min.support = min.support, quality.function = quality.function)
-    p.validate <- prim.validate(p.train, X[-train,], y[-train])
+    p.peel <- prim.peel(X = X[train,], y = y[train], peeling.quantile = peeling.quantile, min.support = min.support, max.peel = max.peel, quality.function = quality.function)
+    p.validate <- prim.validate(p.peel, X[-train,], y[-train])
 
     if(plot) {
       graphics::par(mfrow = c(1,2))
-      graphics::plot(p.train)
+      graphics::plot(p.peel)
       graphics::plot(p.validate)
       graphics::par(mfrow = c(1,1))
     }
@@ -125,6 +134,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 #' @param n Numer of attempts to run the PRIM algorithm
 #' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
+#' @param max.peel Maximal size of a peel, as a fraction. Defaults to 0.1
 #' @param train.fraction Optional train-test split fraction used in validation, defaults to 0.66
 #' @param quality.function Optional setting for function to use for determining subset quality, defaults to mean
 #' @param plot Optional setting to plot intermediate results, defaults to false
@@ -133,7 +143,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 #' @importFrom stats model.frame model.response
 #' @importFrom graphics plot par
 #' @export
-prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
+prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
 
   using.formula <- is.null(X) & is.null(y)
 
@@ -152,6 +162,15 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
     if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
     if(!is.vector(y)) stop("Parameter y has to be a vector")
     if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
+
+    # Remove rows with NA values
+    test.complete <- complete.cases(X)
+    if(!all(test.complete)) {
+      warning("Incomplete cases found in data, removing...")
+      X <- X[test.complete,]
+      y <- y[test.complete]
+    }
+
   }
 
   if(n < 2) stop("Must supply n >= 2")
@@ -177,12 +196,19 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
 
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
-    p.train <- prim.peel(X = X[train,], y = y[train], peeling.quantile = peeling.quantile, min.support = min.support, quality.function = quality.function)
-    p.validate <- prim.validate(p.train, X[-train,], y[-train])
+    p.peel <- prim.peel(
+      X = X[train,],
+      y = y[train],
+      peeling.quantile = peeling.quantile,
+      min.support = min.support,
+      max.peel = max.peel,
+      quality.function = quality.function)
+
+    p.validate <- prim.validate(p.peel, X[-train,], y[-train])
 
     if(plot) {
       graphics::par(mfrow = c(1,2))
-      graphics::plot(p.train)
+      graphics::plot(p.peel)
       graphics::plot(p.validate)
       graphics::par(mfrow = c(1,1))
     }
@@ -219,11 +245,12 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
 #' @param y Response vector, usually of type numeric
 #' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid, as a fraction
+#' @param max.peel Maximal size of a peel, as fraction
 #' @param quality.function Which function to use to determine the quality of a box, defaults to mean
 #' @return An S3 object of class prim.peel
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response
-prim.peel <- function(X, y, peeling.quantile, min.support, quality.function = base::mean) {
+prim.peel <- function(X, y, peeling.quantile, min.support, max.peel, quality.function = base::mean) {
 
 
   if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
@@ -251,7 +278,7 @@ prim.peel <- function(X, y, peeling.quantile, min.support, quality.function = ba
     if(nrow(X) / result$peel.support <= min.support) break
 
     # Find box candidates
-    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, result$peel.support, quality.function)
+    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, max.peel, result$peel.support, quality.function)
 
     if(length(candidates) == 0) break
 
@@ -301,7 +328,7 @@ prim.validate <- function(peel.result, X, y) {
 
   if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
   if(!is.vector(y)) stop("Parameter y has to be a vector")
-  if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
+  if(nrow(X) != length(y)) stop(paste("Parameters X and y are not of same size:", nrow(X), length(y)))
 
   quality.function <- peel.result$quality.function
 
@@ -379,12 +406,13 @@ prim.validate <- function(peel.result, X, y) {
 #' @param y Dependent variable, usually a numeric vector
 #' @param peeling.quantile Quantile to peel off
 #' @param min.support Minimal size of a box
+#' @param max.peel Maximal size of a peel
 #' @param support Support of subset
 #' @param quality.function Function to use to determine box quality
 #' @return A list of potential boxes
 #' @author Jurian Baas
 #' @importFrom stats quantile
-prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, quality.function) {
+prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, support, quality.function) {
 
   i <- 1
   candidates <- list()
@@ -398,46 +426,46 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
 
     col <- X[,i]
 
+    col.support <- length(col)
+
     # Do something different depending on data type
     if(is.numeric(col)) {
 
-      quantiles <- stats::quantile(col, c(peeling.quantile, 1 - peeling.quantile) , names = FALSE, na.rm = T)
+      quantiles <- stats::quantile(col, c(peeling.quantile, 1 - peeling.quantile), names = FALSE)
 
-      quantile.min <- quantiles[1]
-      quantile.plus <- quantiles[2]
+      quantile.left <- quantiles[1]
+      quantile.right <- quantiles[2]
 
-      idx.min <- col < quantile.min
-      idx.plus <- col > quantile.plus
+      idx.left <- col < quantile.left
+      idx.right <- col > quantile.right
 
-      if(sum(idx.min) > 0 & (length(col) - sum(idx.min)) / support >= min.support) {
-        r <- c(r,
-               list(
-                 min = list(
-                   value = quantile.min,
-                   operator = ">=",
-                   type = "numeric",
-                   quality = quality.function(y[!idx.min]),
-                   idx = which(idx.min),
-                   size = sum(idx.min) / length(col),
-                   colname = cnames[i]
-                 )
-               )
+      left.support <- sum(idx.left)
+      right.support <- sum(idx.right)
+
+      left.support.complement <- col.support - left.support
+      right.support.complement <- col.support - right.support
+
+      if(left.support > 0 & left.support / support <= max.peel & left.support.complement / support >= min.support) {
+        r[["left"]] <- list (
+          value = quantile.left,
+          operator = ">=",
+          type = "numeric",
+          quality = quality.function(y[!idx.left]),
+          idx = which(idx.left),
+          size = left.support / col.support,
+          colname = cnames[i]
         )
       }
 
-      if(sum(idx.plus) > 0 & (length(col) - sum(idx.plus)) / support >= min.support) {
-        r <- c(r,
-               list(
-                 plus = list(
-                   value = quantile.plus,
-                   operator = "<=",
-                   type = "numeric",
-                   quality = quality.function(y[!idx.plus]),
-                   idx = which(idx.plus),
-                   size = sum(idx.plus) / length(col),
-                   colname = cnames[i]
-                 )
-               )
+      if(right.support > 0 & right.support / support <= max.peel  & right.support.complement / support >= min.support) {
+        r[["right"]] <- list (
+          value = quantile.right,
+          operator = "<=",
+          type = "numeric",
+          quality = quality.function(y[!idx.right]),
+          idx = which(idx.right),
+          size = right.support / col.support,
+          colname = cnames[i]
         )
       }
 
@@ -446,47 +474,38 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
       # Don't check if column consists of only T or F
       if(any(col) & any(!col)) {
 
-        idx.min <- col
-        idx.plus <- !col
+        idx.true <- col
+        idx.false <- !col
 
-        # Make sure the resulting subsets have enough support
-        if((sum(!col) / support) >= min.support) {
-          r <- c(r,
-                 list(
-                   min = list(
-                     value = FALSE,
-                     operator = "==",
-                     type = "logical",
-                     quality = quality.function(y[!idx.min]),
-                     idx = which(idx.min),
-                     size = sum(idx.min) / length(col),
-                     colname = cnames[i]
-                   )
-                 )
+        support.true <- sum(col)
+        support.false <- sum(!col)
+
+        if(support.true / support <= max.peel & support.false / support >= min.support) {
+          r[["true"]] <- list (
+            value = FALSE,
+            operator = "==",
+            type = "logical",
+            quality = quality.function(y[!idx.true]),
+            idx = which(idx.true),
+            size = sum(idx.true) / col.support,
+            colname = cnames[i]
           )
         }
-        if((sum(col) / support) >= min.support) {
-          r <- c(r,
-                 list(
-                   plus = list(
-                     value = TRUE,
-                     operator = "==",
-                     type = "logical",
-                     quality = quality.function(y[!idx.plus]),
-                     idx = which(idx.plus),
-                     size = sum(idx.plus) / length(col),
-                     colname = cnames[i]
-                   )
-                 )
+        if(support.false / support <= max.peel & support.true / support >= min.support) {
+          r[["false"]] <- list (
+            value = TRUE,
+            operator = "==",
+            type = "logical",
+            quality = quality.function(y[!idx.false]),
+            idx = which(idx.false),
+            size = sum(idx.false) / col.support,
+            colname = cnames[i]
           )
         }
       }
 
     } else if (is.factor(col)) {
 
-      # Reset levels just to be sure, so we don't use levels that no
-      # longer exist due to them being removed in some previous iteration
-      col <- factor(col)
       lvls <- levels(col)
       j <- 1
 
@@ -498,17 +517,30 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
 
         idx <- col == lvl
 
-        if((length(col) - sum(idx)) / support >= min.support) {
-          r[[lvl]] <- list(
-            value = lvl,
-            operator = "!=",
-            type = "factor",
-            quality = quality.function(y[!idx]),
-            idx = which(idx),
-            size = sum(idx) / length(col),
-            colname = cnames[i]
-          )
+        support.lvl <- sum(idx)
+
+        if(support.lvl > 0) {
+
+          support.lvl.complement <- col.support - support.lvl
+
+          #cat(col.support, support.lvl, support.lvl.complement, "\n")
+          #cat(support.lvl / support, support, support.lvl / support <= max.peel,"\n")
+          #cat(support.lvl.complement / support, min.support,  support.lvl.complement / support >= min.support, "\n\n")
+
+          if(support.lvl / support <= max.peel & support.lvl.complement / support >= min.support) {
+            r[[lvl]] <- list (
+              value = lvl,
+              operator = "!=",
+              type = "factor",
+              quality = quality.function(y[!idx]),
+              idx = which(idx),
+              size = support.lvl / col.support,
+              colname = cnames[i]
+            )
+          }
+
         }
+
 
         j <- j + 1
       }
