@@ -4,7 +4,8 @@
 \alias{prim.candidates.find}
 \title{PRIM find split candidates}
 \usage{
-prim.candidates.find(X, y, peeling.quantile, min.support, N, quality.function)
+prim.candidates.find(X, y, peeling.quantile, min.support, support,
+  quality.function)
 }
 \arguments{
 \item{X}{Data frame with observations (may be a subset of original data)}
@@ -15,7 +16,7 @@ prim.candidates.find(X, y, peeling.quantile, min.support, N, quality.function)
 
 \item{min.support}{Minimal size of a box}
 
-\item{N}{Number of rows of original subset}
+\item{support}{Support of subset}
 
 \item{quality.function}{Function to use to determine box quality}
 }
