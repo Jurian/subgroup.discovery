@@ -18,7 +18,7 @@
 #' @param plot Optional setting to plot intermediate results, defaults to false
 #' @return An S3 object of class prim.cover
 #' @author Jurian Baas
-#' @importFrom stats model.frame model.response
+#' @importFrom stats model.frame model.response complete.cases
 #' @importFrom graphics plot par
 #' @export
 prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
@@ -42,7 +42,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
     if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
 
     # Remove rows with NA values
-    test.complete <- complete.cases(X)
+    test.complete <- stats::complete.cases(X)
     if(!all(test.complete)) {
       warning("Incomplete cases found in data, removing...")
       X <- X[test.complete,]
@@ -70,17 +70,16 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
   if(!is.na(max.boxes)) result$max.boxes <- max.boxes
   class(result) <- "prim.cover"
 
-  y.quality <- quality.function(y)
+  y.global.quality <- quality.function(y)
+  y.sub.quality <- quality.function(y)
 
   repeat {
-
-    y.sub.quality <- quality.function(y)
 
     # In case:
     # The user set a max nr of boxes and we reached that limit
     # Current cover has become too small
-    # Current cover quality fell below overall quality
-    if((!is.na(max.boxes) & box.nr > max.boxes) | (nrow(X) < N) | y.sub.quality < y.quality ) {
+    # Current box quality fell below overall quality
+    if((!is.na(max.boxes) & box.nr > max.boxes) | (nrow(X) < N) | y.sub.quality < y.global.quality ) {
       p.leftover <- list()
       class(p.leftover) <- "prim.cover.leftover"
 
@@ -91,10 +90,24 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
       break
     }
 
+    box.nr <- box.nr + 1
+
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
     p.peel <- prim.peel(X = X[train,], y = y[train], peeling.quantile = peeling.quantile, min.support = min.support, max.peel = max.peel, quality.function = quality.function)
     p.validate <- prim.validate(p.peel, X[-train,], y[-train])
+
+    idx <- prim.match.rule(p.validate, X)
+
+    if(sum(idx) == 0) {
+      warning("Validating yielded no box, try increasing max.peel and/or decreasing min.support")
+      break
+    }
+
+    p.validate$cov.support <- nrow(X)
+    p.validate$cov.box.support <- sum(idx)
+    p.validate$cov.overall.quality <- quality.function(y)
+    p.validate$cov.box.quality <- quality.function(y[idx])
 
     if(plot) {
       graphics::par(mfrow = c(1,2))
@@ -103,18 +116,17 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
       graphics::par(mfrow = c(1,1))
     }
 
-    idx <- prim.match.rule(p.validate, X)
+    y.sub.quality <- p.validate$cov.box.quality
 
-    p.validate$cov.support <- nrow(X)
-    p.validate$cov.box.support <- sum(idx)
-    p.validate$cov.overall.quality <- quality.function(y)
-    p.validate$cov.box.quality <- quality.function(y[idx])
+
+    # This box does not meet the minimal quality
+    if(y.sub.quality < y.global.quality )  next
 
     X <- X[!idx,]
     y <- y[!idx]
-    box.nr <- box.nr + 1
 
     covers <- c(covers, list(p.validate))
+
   }
 
   result$covers <- covers
@@ -140,7 +152,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 #' @param plot Optional setting to plot intermediate results, defaults to false
 #' @return An S3 object of type prim.diversify
 #' @author Jurian Baas
-#' @importFrom stats model.frame model.response
+#' @importFrom stats model.frame model.response complete.cases
 #' @importFrom graphics plot par
 #' @export
 prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
@@ -164,7 +176,7 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
     if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
 
     # Remove rows with NA values
-    test.complete <- complete.cases(X)
+    test.complete <- stats::complete.cases(X)
     if(!all(test.complete)) {
       warning("Incomplete cases found in data, removing...")
       X <- X[test.complete,]
@@ -282,7 +294,7 @@ prim.peel <- function(X, y, peeling.quantile, min.support, max.peel, quality.fun
 
     if(length(candidates) == 0) break
 
-    cf <- prim.candidates.best(candidates)
+    cf  <- prim.candidates.best(candidates)
 
     if(cf$type == "factor") {
       cf$value <- paste0("'", cf$value, "'")
@@ -523,10 +535,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
 
           support.lvl.complement <- col.support - support.lvl
 
-          #cat(col.support, support.lvl, support.lvl.complement, "\n")
-          #cat(support.lvl / support, support, support.lvl / support <= max.peel,"\n")
-          #cat(support.lvl.complement / support, min.support,  support.lvl.complement / support >= min.support, "\n\n")
-
           if(support.lvl / support <= max.peel & support.lvl.complement / support >= min.support) {
             r[[lvl]] <- list (
               value = lvl,
@@ -591,14 +599,7 @@ prim.candidates.best <- function(candidates) {
         support.min <- sup[j]
         candidate.best <- candidates[[i]][[j]]
 
-      } else if (!is.na(quality.max) & col[j] == quality.max & sup[j] < support.min) { # Break ties by their support
-
-        quality.max <- col[j]
-        support.min <- sup[j]
-        candidate.best <- candidates[[i]][[j]]
-
       }
-
     }
   }
   return(candidate.best)
