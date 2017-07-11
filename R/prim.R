@@ -416,7 +416,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
                    type = "numeric",
                    quality = quality.function(y[!idx.min]),
                    idx = which(idx.min),
-                   size = sum(idx.min)/ length(col),
+                   size = sum(idx.min) / length(col),
                    colname = cnames[i]
                  )
                )
@@ -432,7 +432,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
                    type = "numeric",
                    quality = quality.function(y[!idx.plus]),
                    idx = which(idx.plus),
-                   size = sum(idx.plus)/ length(col),
+                   size = sum(idx.plus) / length(col),
                    colname = cnames[i]
                  )
                )
@@ -457,7 +457,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
                      type = "logical",
                      quality = quality.function(y[!idx.min]),
                      idx = which(idx.min),
-                     size = sum(idx.min)/ length(col),
+                     size = sum(idx.min) / length(col),
                      colname = cnames[i]
                    )
                  )
@@ -472,7 +472,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
                      type = "logical",
                      quality = quality.function(y[!idx.plus]),
                      idx = which(idx.plus),
-                     size = sum(idx.plus)/ length(col),
+                     size = sum(idx.plus) / length(col),
                      colname = cnames[i]
                    )
                  )
@@ -503,7 +503,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, q
             type = "factor",
             quality = quality.function(y[!idx]),
             idx = which(idx),
-            size = sum(idx)/ length(col),
+            size = sum(idx) / length(col),
             colname = cnames[i]
           )
         }
@@ -535,43 +535,39 @@ prim.candidates.best <- function(candidates) {
   qualities <- sapply(candidates, function(col) {
     sapply(col, function(x) x$quality)
   })
+  supports <- sapply(candidates, function(col) {
+    sapply(col, function(x) x$size)
+  })
 
   candidate.best <- NULL
   quality.max <- NA
+  support.min <- NA
+
+  # Find the best candidate by linear search
   for(i in 1:length(qualities)) {
 
     col <- qualities[[i]]
+    sup <- supports[[i]]
 
     for(j in 1:length(col)) {
 
       if(is.na(quality.max) | col[j] > quality.max) {
+
         quality.max <- col[j]
+        support.min <- sup[j]
         candidate.best <- candidates[[i]][[j]]
+
+      } else if (!is.na(quality.max) & col[j] == quality.max & sup[j] < support.min) { # Break ties by their support
+
+        quality.max <- col[j]
+        support.min <- sup[j]
+        candidate.best <- candidates[[i]][[j]]
+
       }
 
     }
   }
   return(candidate.best)
-
-  idx <- which(qualities == max(qualities, na.rm = T), arr.ind = T)
-
-  # Break any ties at (weighted!) random
-  if(nrow(idx) > 1) {
-
-    sizes <- sapply(candidates, function(x){
-      c(
-        min = ifelse(is.null(x$min$size), NA, x$min$size),
-        plus = ifelse(is.null(x$plus$size), NA, x$plus$size))
-    })
-
-    # Use a weighted random strategy, based on the size of the resulting subset
-    idx <- idx[sample(nrow(idx), 1, prob = 1 - sizes[idx]),]
-  }
-
-  best <- candidates[[ idx[2] ]][[ rownames(qualities)[idx[1]] ]]
-  best$name <- colnames(qualities)[idx[2]]
-
-  return(best)
 }
 
 #' @title Create box matching index
