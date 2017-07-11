@@ -91,6 +91,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
       graphics::par(mfrow = c(1,2))
       graphics::plot(p.train)
       graphics::plot(p.validate)
+      graphics::par(mfrow = c(1,1))
     }
 
     idx <- prim.match.rule(p.validate, X)
@@ -183,6 +184,7 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
       graphics::par(mfrow = c(1,2))
       graphics::plot(p.train)
       graphics::plot(p.validate)
+      graphics::par(mfrow = c(1,1))
     }
 
     idx <- prim.match.rule(p.validate, X)
@@ -753,6 +755,10 @@ plot.prim.cover <- function(x, ...) {
     c( supports = c$cov.box.support / c$cov.support,
        box.qualities = c$cov.box.quality)
   })))
+  dat <- rbind(dat, c(
+    supports = x$leftover$cov.support / x$covers[[length(x$covers)]]$cov.support,
+    box.qualities = x$leftover$cov.overall.quality
+  ))
 
   graphics::par(bty = "l")
   graphics::plot (
@@ -776,7 +782,7 @@ plot.prim.cover <- function(x, ...) {
   graphics::text (
     dat$supports,
     dat$box.qualities,
-    labels = paste("Cover", 1 : length(x$covers)),
+    labels = c(paste("Cover", 1 : length(x$covers)), "Leftover"),
     cex = 0.7, pos = 2, col = "orangered4", font = 2)
 }
 
