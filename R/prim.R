@@ -255,6 +255,10 @@ prim.peel <- function(X, y, peeling.quantile, min.support, quality.function = ba
 
     cf <- prim.candidates.best(candidates)
 
+    if(cf$type == "factor") {
+      cf$value <- paste0("'", cf$value, "'")
+    }
+
     X <- X[-cf$idx,]
     y <- y[-cf$idx]
 
@@ -262,7 +266,7 @@ prim.peel <- function(X, y, peeling.quantile, min.support, quality.function = ba
     result$supports <- c(result$supports, length(y) / result$peel.support)
 
     result$rule.values <- c(result$rule.values, cf$value)
-    result$rule.names <- c(result$rule.names, cf$name)
+    result$rule.names <- c(result$rule.names, cf$colname)
     result$rule.operators <- c(result$rule.operators, cf$operator)
     result$rule.types <- c(result$rule.types, cf$type)
   }
@@ -373,12 +377,12 @@ prim.validate <- function(peel.result, X, y) {
 #' @param y Dependent variable, usually a numeric vector
 #' @param peeling.quantile Quantile to peel off
 #' @param min.support Minimal size of a box
-#' @param N Number of rows of original subset
+#' @param support Support of subset
 #' @param quality.function Function to use to determine box quality
 #' @return A list of potential boxes
 #' @author Jurian Baas
 #' @importFrom stats quantile
-prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality.function) {
+prim.candidates.find <- function(X, y, peeling.quantile, min.support, support, quality.function) {
 
   i <- 1
   candidates <- list()
@@ -395,14 +399,15 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
     # Do something different depending on data type
     if(is.numeric(col)) {
 
-      quantiles <- stats::quantile(col, c(peeling.quantile, 1 - peeling.quantile) , names = FALSE)
+      quantiles <- stats::quantile(col, c(peeling.quantile, 1 - peeling.quantile) , names = FALSE, na.rm = T)
+
       quantile.min <- quantiles[1]
       quantile.plus <- quantiles[2]
 
       idx.min <- col < quantile.min
       idx.plus <- col > quantile.plus
 
-      if(sum(idx.min) > 0 & (length(col) - sum(idx.min)) / N >= min.support) {
+      if(sum(idx.min) > 0 & (length(col) - sum(idx.min)) / support >= min.support) {
         r <- c(r,
                list(
                  min = list(
@@ -411,13 +416,14 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
                    type = "numeric",
                    quality = quality.function(y[!idx.min]),
                    idx = which(idx.min),
-                   size = sum(idx.min)/ length(col)
+                   size = sum(idx.min)/ length(col),
+                   colname = cnames[i]
                  )
                )
         )
       }
 
-      if(sum(idx.plus) > 0 & (length(col) - sum(idx.plus)) / N >= min.support) {
+      if(sum(idx.plus) > 0 & (length(col) - sum(idx.plus)) / support >= min.support) {
         r <- c(r,
                list(
                  plus = list(
@@ -426,7 +432,8 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
                    type = "numeric",
                    quality = quality.function(y[!idx.plus]),
                    idx = which(idx.plus),
-                   size = sum(idx.plus)/ length(col)
+                   size = sum(idx.plus)/ length(col),
+                   colname = cnames[i]
                  )
                )
         )
@@ -441,7 +448,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
         idx.plus <- !col
 
         # Make sure the resulting subsets have enough support
-        if((sum(!col) / N) >= min.support) {
+        if((sum(!col) / support) >= min.support) {
           r <- c(r,
                  list(
                    min = list(
@@ -450,12 +457,13 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
                      type = "logical",
                      quality = quality.function(y[!idx.min]),
                      idx = which(idx.min),
-                     size = sum(idx.min)/ length(col)
+                     size = sum(idx.min)/ length(col),
+                     colname = cnames[i]
                    )
                  )
           )
         }
-        if((sum(col) / N) >= min.support) {
+        if((sum(col) / support) >= min.support) {
           r <- c(r,
                  list(
                    plus = list(
@@ -464,7 +472,8 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
                      type = "logical",
                      quality = quality.function(y[!idx.plus]),
                      idx = which(idx.plus),
-                     size = sum(idx.plus)/ length(col)
+                     size = sum(idx.plus)/ length(col),
+                     colname = cnames[i]
                    )
                  )
           )
@@ -476,25 +485,32 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
       # Reset levels just to be sure, so we don't use levels that no
       # longer exist due to them being removed in some previous iteration
       col <- factor(col)
+      lvls <- levels(col)
+      j <- 1
 
-      r <- lapply(levels(col), function(lvl) {
+      repeat {
+
+        if(j > length(lvls)) break
+
+        lvl <- lvls[j]
 
         idx <- col == lvl
 
-        # Make sure the resulting subsets have enough support
-        if((length(col) - sum(idx)) / N >= min.support) {
-          box <- list(
+        if((length(col) - sum(idx)) / support >= min.support) {
+          r[[lvl]] <- list(
             value = lvl,
             operator = "!=",
             type = "factor",
             quality = quality.function(y[!idx]),
             idx = which(idx),
-            size = sum(idx)/ length(col)
+            size = sum(idx)/ length(col),
+            colname = cnames[i]
           )
-          return(box)
         }
-        return(NULL)
-      })
+
+        j <- j + 1
+      }
+
     }
 
 
@@ -516,11 +532,26 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, N, quality
 #' @author Jurian Baas
 prim.candidates.best <- function(candidates) {
 
-  qualities <- sapply(candidates, function(x){
-    c(
-      min = ifelse(is.null(x$min$quality), NA, x$min$quality),
-      plus = ifelse(is.null(x$plus$quality), NA, x$plus$quality))
+  qualities <- sapply(candidates, function(col) {
+    sapply(col, function(x) x$quality)
   })
+
+  candidate.best <- NULL
+  quality.max <- NA
+  for(i in 1:length(qualities)) {
+
+    col <- qualities[[i]]
+
+    for(j in 1:length(col)) {
+
+      if(is.na(quality.max) | col[j] > quality.max) {
+        quality.max <- col[j]
+        candidate.best <- candidates[[i]][[j]]
+      }
+
+    }
+  }
+  return(candidate.best)
 
   idx <- which(qualities == max(qualities, na.rm = T), arr.ind = T)
 
@@ -676,7 +707,7 @@ plot.prim.peel <- function(x, ...) {
     x$supports,
     x$box.qualities,
     labels = c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
-    cex = 0.7, pos = 4, col = "orangered4", font = 2)
+    cex = 0.7, pos = 2, col = "orangered4", font = 2)
 }
 
 #' @title Plot PRIM test result
@@ -709,7 +740,7 @@ plot.prim.validate <- function(x, ...) {
     x$supports,
     x$box.qualities,
     labels = c("", paste(x$rule.names, x$rule.operators, x$rule.values) ),
-    cex = 0.7, pos = 4, col = "orangered4", font = 2)
+    cex = 0.7, pos = 2, col = "orangered4", font = 2)
 }
 
 #' @title Plot PRIM cover result
