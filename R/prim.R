@@ -637,31 +637,57 @@ prim.rule.condense <- function(prim.object) {
   }
 
   # Search for the rules leading up to the best box
-  rule.idx <- 1:(which.max(prim.object$box.qualities)-1)
+  rule.idx <- 1:(which.max(prim.object$box.qualities) - 1 )
 
   # Combine the lists into a single data frame
-  t <- data.frame (
+  rules <- data.frame (
     name = factor(prim.object$rule.names[rule.idx]),
     operator = factor(prim.object$rule.operators[rule.idx]),
     value = as.character(prim.object$rule.values[rule.idx]),
-    score = prim.object$box.qualities[rule.idx],
-    type = factor(prim.object$rule.types[rule.idx])
+    quality = prim.object$box.qualities[rule.idx],
+    type = prim.object$rule.types[rule.idx]
   )
 
-  # Group by name first
-  t <- by(t, t$name, function(x) {
+  rules.used <- integer()
 
-    # Group by operator in the name subgroup
-    by(x, factor( x$operator), function(y) {
-      # Find the rule with the largest associated score
-      y <- y[which.max( y$score),]
-      # Return this rule as a proper string
-      return(paste(y$name, y$operator, y$value))
-    })
-  })
+  for(i in seq_along(rule.idx)) {
 
-  # Collapse to character vector
-  return(unname(unlist(as.vector(t))))
+    current.name <- prim.object$rule.names[i]
+    current.operator <- prim.object$rule.operators[i]
+    current.value <- prim.object$rule.values[i]
+    current.quality <- prim.object$box.qualities[i]
+    current.type <- prim.object$rule.types[i]
+
+    if(current.type != "numeric" | i == 1) {
+      rules.used <- c(rules.used, i)
+      next
+    }
+
+    prev.idx <- 1:(i - 1)
+    prev.matches <- current.name == prim.object$rule.names[prev.idx]
+
+    if(!any(prev.matches)) {
+      rules.used <- c(rules.used, i)
+      next
+    }
+
+    if(current.operator %in% prim.object$rule.operators[prev.matches]) {
+
+      prev.matches.idx <- which(prev.matches)
+
+      if(all(current.quality > prim.object$box.qualities[prev.matches.idx])) {
+
+        latest.match <- rev(prev.matches.idx)[1]
+
+        rules.used <- rules.used[rules.used != latest.match]
+        rules.used <- c(rules.used, i)
+      }
+
+    }
+
+  }
+
+  return(unname(apply(rules[rules.used,1:3], 1, paste, collapse = " ")))
 }
 
 #' @title Union of multiple rules
