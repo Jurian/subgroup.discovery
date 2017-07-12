@@ -18,7 +18,7 @@
 #' @param plot Optional setting to plot intermediate results, defaults to false
 #' @return An S3 object of class prim.cover
 #' @author Jurian Baas
-#' @importFrom stats model.frame model.response complete.cases
+#' @importFrom stats model.frame model.response complete.cases terms
 #' @importFrom graphics plot par
 #' @export
 prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
@@ -29,7 +29,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
   if(using.formula) {
     if(!is.data.frame(data)) stop("Data argument is not a data frame, aborting...")
 
-    X <- stats::model.frame(formula = formula, data = data)
+    X <- stats::model.frame(formula(stats::terms(formula, data = data, simplify = TRUE)), data)
     y <- stats::model.response(X)
     X <- X[,-1]
 
@@ -152,7 +152,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 #' @param plot Optional setting to plot intermediate results, defaults to false
 #' @return An S3 object of type prim.diversify
 #' @author Jurian Baas
-#' @importFrom stats model.frame model.response complete.cases
+#' @importFrom stats model.frame model.response complete.cases terms
 #' @importFrom graphics plot par
 #' @export
 prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
@@ -163,7 +163,7 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
   if(using.formula) {
     if(!is.data.frame(data)) stop("Data argument is not a data frame, aborting...")
 
-    X <- stats::model.frame(formula = formula, data = data)
+    X <- stats::model.frame(formula(stats::terms(formula, data = data, simplify = TRUE)), data)
     y <- stats::model.response(X)
     X <- X[,-1]
 
