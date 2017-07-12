@@ -21,9 +21,9 @@
 #' @importFrom stats model.frame model.response complete.cases terms
 #' @importFrom graphics plot par
 #' @export
-prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
+prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
 
-  using.formula <- is.null(X) & is.null(y)
+  using.formula <- missing(X) & missing(y)
 
   # Use the formula interface
   if(using.formula) {
@@ -155,9 +155,9 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
 #' @importFrom stats model.frame model.response complete.cases terms
 #' @importFrom graphics plot par
 #' @export
-prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
+prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
 
-  using.formula <- is.null(X) & is.null(y)
+  using.formula <- missing(X) & missing(y)
 
   # Use the formula interface
   if(using.formula) {
@@ -264,15 +264,6 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
 #' @importFrom stats model.frame model.response
 prim.peel <- function(X, y, peeling.quantile, min.support, max.peel, quality.function = base::mean) {
 
-
-  if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
-  if(!is.vector(y)) stop("Parameter y has to be a vector")
-  if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
-  if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
-  if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
-  if(min.support <= 0) stop("Minimum support must be positive")
-  if(min.support >= 1) stop("Minimum support must be a fraction smaller than 1")
-
   result <- list()
   result$box.qualities <- quality.function(y)
   result$supports <- 1
@@ -338,8 +329,6 @@ prim.validate <- function(peel.result, X, y) {
     stop("Supplied argument is not of class prim.peel, aborting...")
   }
 
-  if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
-  if(!is.vector(y)) stop("Parameter y has to be a vector")
   if(nrow(X) != length(y)) stop(paste("Parameters X and y are not of same size:", nrow(X), length(y)))
 
   quality.function <- peel.result$quality.function
@@ -628,6 +617,7 @@ prim.rule.match <- function(prim.object, X) {
 #' @param prim.object An S3 object of class prim.peel or prim.validate
 #' @return The condensed rule as a single string
 #' @author Jurian Baas
+#' @importFrom stats aggregate
 prim.rule.condense <- function(prim.object) {
 
   supported.classes <- c("prim.peel", "prim.validate")
@@ -648,96 +638,64 @@ prim.rule.condense <- function(prim.object) {
     type = prim.object$rule.types[rule.idx]
   )
 
-  rules.used <- integer()
+  numerical.rules.idx <- rules$type == "numeric"
 
-  for(i in seq_along(rule.idx)) {
+  if(sum(numerical.rules.idx) > 0) {
 
-    current.name <- prim.object$rule.names[i]
-    current.operator <- prim.object$rule.operators[i]
-    current.value <- prim.object$rule.values[i]
-    current.quality <- prim.object$box.qualities[i]
-    current.type <- prim.object$rule.types[i]
+    numerical.rules <- rules[numerical.rules.idx,1:3]
 
-    if(current.type != "numeric" | i == 1) {
-      rules.used <- c(rules.used, i)
-      next
-    }
+    numerical.rules <- aggregate(
+      list(value = numerical.rules$value),
+      list(name = numerical.rules$name, operator = numerical.rules$operator),
+      function(x) rev(x)[1])
 
-    prev.idx <- 1:(i - 1)
-    prev.matches <- current.name == prim.object$rule.names[prev.idx]
+    other.rules <- rules[!numerical.rules.idx,1:3]
+    condensed.rules <- rbind(numerical.rules, other.rules)
 
-    if(!any(prev.matches)) {
-      rules.used <- c(rules.used, i)
-      next
-    }
+  } else {
 
-    if(current.operator %in% prim.object$rule.operators[prev.matches]) {
-
-      prev.matches.idx <- which(prev.matches)
-
-      if(all(current.quality > prim.object$box.qualities[prev.matches.idx])) {
-
-        latest.match <- rev(prev.matches.idx)[1]
-
-        rules.used <- rules.used[rules.used != latest.match]
-        rules.used <- c(rules.used, i)
-      }
-
-    }
+    condensed.rules <- rules[, 1:3]
 
   }
 
-  return(unname(apply(rules[rules.used,1:3], 1, paste, collapse = " ")))
-}
-
-#' @title Union of multiple rules
-#' @description This function applies the rules given by the parameters to a dataset and calculates the union, i.e. those observations where at least one rule evaluates to TRUE are returned as TRUE.
-#' @param X Data frame to apply rules to
-#' @param ... A number of objects of class "prim.peel" and/or "prim.validate"
-#' @author Jurian Baas
-#' @return Logical vector, true iff at least one rule evalutes to TRUE a certain observation
-prim.rule.union <- function(X, ...) {
-
-  prim.objects <- list(...)
-
-  supported.classes <- c("prim.peel", "prim.validate")
-  used.classes <- sapply(prim.objects, class)
-
-  if(!all(used.classes %in% supported.classes)) {
-    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
-  }
-
-  # Match the dataset for each rule
-  matches <- sapply(X = prim.objects, FUN = prim.rule.match, X)
-  # Apply logical OR row wise
-  union <- apply(matches, 1, any)
-
-  return(union)
+  return(sort(apply(condensed.rules, 1, paste, collapse = " ")))
 }
 
 #' @title Intersection of multiple rules
 #' @description This function applies the rules given by the parameters to a dataset and calculates the intersection, i.e. those observations where all rules evaluate to TRUE are returned as TRUE.
 #' @param X Data frame to apply rules to
-#' @param ... A number of objects of class "prim.peel" and/or "prim.validate"
+#' @param prim.objects A list of objects of class "prim.peel" and/or "prim.validate"
+#' @param operation One of {"union", "intersect"}
 #' @author Jurian Baas
 #' @return Logical vector, true iff all rules evaluate to TRUE for a certain observation
-prim.rule.intersect <- function(X, ...) {
+prim.rule.operations <- function(X, prim.objects, operation) {
 
-  prim.objects <- list(...)
+  supported.operations <-  list("union", "intersect")
+
+  if(!operation %in% supported.operations) {
+    stop("Not a valid operation")
+  }
 
   supported.classes <- c("prim.peel", "prim.validate")
   used.classes <- sapply(prim.objects, class)
 
   if(!all(used.classes %in% supported.classes)) {
-    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
+    stop("Supplied prim.object is not of class prim.peel or prim.validate")
   }
 
   # Match the dataset for each rule
   matches <- sapply(X = prim.objects, FUN = prim.rule.match, X)
-  # Apply logical OR row wise
-  intersection <- apply(matches, 1, all)
 
-  return(intersection)
+  if(operation == "union") {
+    # Apply logical OR row wise
+    matches <- apply(matches, 1, any)
+  }else {
+    # Apply logical AND row wise
+    matches <- apply(matches, 1, all)
+  }
+
+
+  return(matches)
 }
 
 
