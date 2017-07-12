@@ -4,9 +4,9 @@
 \alias{prim.cover}
 \title{PRIM covering strategy}
 \usage{
-prim.cover(formula, data, X = NULL, y = NULL, peeling.quantile, min.support,
-  max.peel = 0.1, train.fraction = 0.66, max.boxes = NA,
-  quality.function = base::mean, plot = FALSE)
+prim.cover(formula, data, X, y, peeling.quantile, min.support, max.peel = 0.1,
+  train.fraction = 0.66, max.boxes = NA, quality.function = base::mean,
+  plot = FALSE)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}

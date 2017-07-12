@@ -4,9 +4,9 @@
 \alias{prim.diversify}
 \title{PRIM diversify strategy}
 \usage{
-prim.diversify(formula, data, X = NULL, y = NULL, n, peeling.quantile,
-  min.support, max.peel = 0.1, train.fraction = 0.66,
-  quality.function = base::mean, plot = FALSE)
+prim.diversify(formula, data, X, y, n, peeling.quantile, min.support,
+  max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean,
+  plot = FALSE)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
