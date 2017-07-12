@@ -97,7 +97,7 @@ prim.cover <- function(formula, data, X = NULL, y = NULL, peeling.quantile, min.
     p.peel <- prim.peel(X = X[train,], y = y[train], peeling.quantile = peeling.quantile, min.support = min.support, max.peel = max.peel, quality.function = quality.function)
     p.validate <- prim.validate(p.peel, X[-train,], y[-train])
 
-    idx <- prim.match.rule(p.validate, X)
+    idx <- prim.rule.match(p.validate, X)
 
     if(sum(idx) == 0) {
       warning("Validating yielded no box, try increasing max.peel and/or decreasing min.support")
@@ -225,7 +225,7 @@ prim.diversify <- function(formula, data, X = NULL, y = NULL, n, peeling.quantil
       graphics::par(mfrow = c(1,1))
     }
 
-    idx <- prim.match.rule(p.validate, X)
+    idx <- prim.rule.match(p.validate, X)
 
     p.validate$att.box.support <- sum(idx)
     p.validate$att.box.quality <- quality.function(y[idx])
@@ -318,7 +318,7 @@ prim.peel <- function(X, y, peeling.quantile, min.support, max.peel, quality.fun
 
   class(result) <- "prim.peel"
 
-  result$superrule <- prim.condense.rules(result)
+  result$superrule <- prim.rule.condense(result)
   result$call <- match.call()
 
   return(result)
@@ -405,7 +405,7 @@ prim.validate <- function(peel.result, X, y) {
   result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
   result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
 
-  result$superrule <- prim.condense.rules(result)
+  result$superrule <- prim.rule.condense(result)
   result$call <- match.call()
 
   return(result)
@@ -611,11 +611,14 @@ prim.candidates.best <- function(candidates) {
 #' @param X A data frame with at least those columns that were used in creating the prim S3 object
 #' @return A logical index of matching records
 #' @author Jurian Baas
-prim.match.rule <- function(prim.object, X) {
+prim.rule.match <- function(prim.object, X) {
 
-  if(class(prim.object) != "prim.peel" & class(prim.object) != "prim.validate") {
+  supported.classes <- c("prim.peel", "prim.validate")
+
+  if(!class(prim.object) %in% supported.classes) {
     stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
   }
+
   return(with(X, eval(parse(text = paste0(prim.object$superrule, collapse = " & ")))))
 }
 
@@ -625,9 +628,11 @@ prim.match.rule <- function(prim.object, X) {
 #' @param prim.object An S3 object of class prim.peel or prim.validate
 #' @return The condensed rule as a single string
 #' @author Jurian Baas
-prim.condense.rules <- function(prim.object) {
+prim.rule.condense <- function(prim.object) {
 
-  if(class(prim.object) != "prim.peel" & class(prim.object) != "prim.validate"){
+  supported.classes <- c("prim.peel", "prim.validate")
+
+  if(!class(prim.object) %in% supported.classes) {
     stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
   }
 
@@ -659,8 +664,55 @@ prim.condense.rules <- function(prim.object) {
   return(unname(unlist(as.vector(t))))
 }
 
+#' @title Union of multiple rules
+#' @description This function applies the rules given by the parameters to a dataset and calculates the union, i.e. those observations where at least one rule evaluates to TRUE are returned as TRUE.
+#' @param X Data frame to apply rules to
+#' @param ... A number of objects of class "prim.peel" and/or "prim.validate"
+#' @author Jurian Baas
+#' @return Logical vector, true iff at least one rule evalutes to TRUE a certain observation
+prim.rule.union <- function(X, ...) {
 
+  prim.objects <- list(...)
 
+  supported.classes <- c("prim.peel", "prim.validate")
+  used.classes <- sapply(prim.objects, class)
+
+  if(!all(used.classes %in% supported.classes)) {
+    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
+  }
+
+  # Match the dataset for each rule
+  matches <- sapply(X = prim.objects, FUN = prim.rule.match, X)
+  # Apply logical OR row wise
+  union <- apply(matches, 1, any)
+
+  return(union)
+}
+
+#' @title Intersection of multiple rules
+#' @description This function applies the rules given by the parameters to a dataset and calculates the intersection, i.e. those observations where all rules evaluate to TRUE are returned as TRUE.
+#' @param X Data frame to apply rules to
+#' @param ... A number of objects of class "prim.peel" and/or "prim.validate"
+#' @author Jurian Baas
+#' @return Logical vector, true iff all rules evaluate to TRUE for a certain observation
+prim.rule.intersect <- function(X, ...) {
+
+  prim.objects <- list(...)
+
+  supported.classes <- c("prim.peel", "prim.validate")
+  used.classes <- sapply(prim.objects, class)
+
+  if(!all(used.classes %in% supported.classes)) {
+    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
+  }
+
+  # Match the dataset for each rule
+  matches <- sapply(X = prim.objects, FUN = prim.rule.match, X)
+  # Apply logical OR row wise
+  intersection <- apply(matches, 1, all)
+
+  return(intersection)
+}
 
 
 #-------------------------------------------------------------------------------------------#
@@ -688,7 +740,7 @@ predict.prim.cover <- function(object, newdata, ... ) {
 
     cover <- object$covers[[i]]
 
-    idx <- prim.match.rule(cover, newdata)
+    idx <- prim.rule.match(cover, newdata)
 
     y.hat[idx & is.na(y.hat)] <- cover$cov.box.quality
 
