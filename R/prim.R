@@ -194,6 +194,8 @@ prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support
   if(train.fraction >= 1) stop("Training fraction must be a fraction smaller than 1")
 
   result <- list()
+  class(result) <- "prim.diversify"
+
   attempts <- list()
 
   result$peeling.quantile = peeling.quantile
@@ -234,17 +236,13 @@ prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support
   }
 
   result$attempts <- attempts
-  class(result) <- "prim.diversify"
+  result$scoreMatrix <- prim.diversify.compare(X, result)
+  result$scores <- rowMeans(result$scoreMatrix, na.rm = TRUE)
 
   if(using.formula) result$formula <- formula
 
   return(result)
 }
-
-
-
-
-
 
 
 #-------------------------------------------------------------------------------------------#
@@ -698,6 +696,30 @@ prim.rule.operations <- function(X, prim.objects, operation) {
   return(matches)
 }
 
+#' @title Compare PRIM diversify results
+#' @description Compares all attempts of a PRIM diversify operation with each other
+#' @details Comparison is done by the following formula \eqn{\frac{|A \cap B|}{|A \cup B|}}
+#' @param X Data frame to do intersect and union operations
+#' @param p.div An S3 object of type "prim.diversify"
+#' @author Jurian Baas
+#' @return A matrix with the comparisons laid out by position
+#' @importFrom utils combn
+prim.diversify.compare <- function(X, p.div) {
+
+  if(class(p.div) != "prim.diversify")
+    stop("Argument is not of class prim.diversify")
+
+  nr.of.attempts <- length(p.div$attempts)
+  idx <- combn(1:nr.of.attempts, 2)
+  scores <- apply(idx, 2, function(i) {
+    sum(prim.rule.operations(X, p.div$attempts[i], "intersect")) / sum(prim.rule.operations(X, p.div$attempts[i], "union"))
+  })
+  m <- matrix(ncol = nr.of.attempts, nrow = nr.of.attempts)
+  m[t(idx)] <- scores
+  m[t(idx[ nrow(idx):1, ])] <- scores
+  return(m)
+}
+
 
 #-------------------------------------------------------------------------------------------#
 ################################### S3 PREDICT FUNCTIONS ####################################
@@ -1033,12 +1055,21 @@ summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
   cat("  |  Set support: ", object$support, "\n")
   cat("  |  Set quality: ", round(object$overall.quality, digits), "\n")
   cat("\n")
-
+  cat("  Scores:", "\n  | ")
+  cat(paste0(
+    gsub(
+      "NA",
+      "    ",
+      apply(formatC(round(object$scoreMatrix, 2), format = "f", digits = 2), 1, paste, collapse = "\t"))
+    , collapse = "\n  |  ")
+    )
+  cat("\n")
   for(i in 1:length(object$attempts)) {
     x <- object$attempts[[i]]
     cat("\n")
     cat("  ======================================", "\n")
     cat("  ============= ATTEMPT", i,"==============", "\n")
+    cat("  |  Score:", round(object$scores[i], digits), "\n")
     cat("  |  Box quality: ", round(x$att.box.quality, digits), "(", round(x$att.box.quality / object$overall.quality, digits), ") \n")
     cat("  |  Box support: ", round(x$att.box.support / object$support, digits) , " (", x$att.box.support, ") \n")
     cat("\n")
