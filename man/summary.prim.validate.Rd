@@ -13,7 +13,7 @@
 
 \item{round}{Optional setting to disable rounding}
 
-\item{digits}{Optional setting to control nr of digits to round}
+\item{digits}{Optional setting to control number of digits to round}
 }
 \value{
 Nothing, this function is called for its side-effects

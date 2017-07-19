@@ -20,7 +20,7 @@
 credit
 }
 \description{
-A dataset containing the atributes of people who did or did not default on their loan.
+A dataset containing the attributes of people who did or did not default on their loan.
 }
 \details{
 Toy example, useful for debugging purposes.

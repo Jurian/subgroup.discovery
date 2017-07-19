@@ -96,7 +96,7 @@
 ames
 }
 \description{
-Data set contains information from the Ames Assessor’s Office used in computing assessed
+Data set contains information from the Ames Assessor Office used in computing assessed
 values for individual residential properties sold in Ames, IA from 2006 to 2010.
 Tab characters are used to separate variables in the data file. The data has 82 columns
 which include 23 nominal, 23 ordinal, 14 discrete, and 20 continuous variables
@@ -104,6 +104,6 @@ which include 23 nominal, 23 ordinal, 14 discrete, and 20 continuous variables
 }
 \details{
 Sources:
-Ames, Iowa Assessor’s Office
+Ames, Iowa Assessor Office
 }
 \keyword{datasets}

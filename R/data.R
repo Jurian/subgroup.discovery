@@ -1,6 +1,6 @@
 #' Credit scoring data.
 #'
-#' A dataset containing the atributes of people who did or did not default on their loan.
+#' A dataset containing the attributes of people who did or did not default on their loan.
 #'
 #' Toy example, useful for debugging purposes.
 #'
@@ -30,8 +30,8 @@
 #' (c) Date received: 9 May 1990
 #'
 #' Past Usage:
-#'  Smith,~J.~W., Everhart,~J.~E., Dickson,~W.~C., Knowler,~W.~C., \&
-#'  Johannes,~R.~S. (1988). Using the ADAP learning algorithm to forecast
+#'  Smith, J.W., Everhart, J.E., Dickson, W.C., Knowler, W.C., \&
+#'  Johannes, R.S. (1988). Using the ADAP learning algorithm to forecast
 #'  the onset of diabetes mellitus.  In {Proceedings of the Symposium
 #'  on Computer Applications and Medical Care} (pp. 261--265).
 #'  IEEE Computer Society Press.
@@ -71,14 +71,14 @@
 
 #' Ames Housing data.
 #'
-#' Data set contains information from the Ames Assessor’s Office used in computing assessed
+#' Data set contains information from the Ames Assessor Office used in computing assessed
 #' values for individual residential properties sold in Ames, IA from 2006 to 2010.
 #' Tab characters are used to separate variables in the data file. The data has 82 columns
 #' which include 23 nominal, 23 ordinal, 14 discrete, and 20 continuous variables
 #' (and 2 additional observation identifiers).
 #'
 #' Sources:
-#' Ames, Iowa Assessor’s Office
+#' Ames, Iowa Assessor Office
 #'
 #' @format A data frame with 2930 rows and 82 variables:
 #' \describe{
