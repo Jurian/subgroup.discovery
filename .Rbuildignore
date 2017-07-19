@@ -2,3 +2,4 @@
 ^\.Rproj\.user$
 ^dev
 ^dev/*\.R$
+^cran-comments\.md$
