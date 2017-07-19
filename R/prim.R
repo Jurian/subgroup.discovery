@@ -392,6 +392,7 @@ prim.validate <- function(peel.result, X, y) {
   result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
   result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
 
+  result$metrics <- prim.validate.metrics(result)
   result$superrule <- prim.rule.condense(result)
   result$call <- match.call()
 
@@ -564,26 +565,20 @@ prim.candidates.best <- function(candidates) {
   qualities <- sapply(candidates, function(col) {
     sapply(col, function(x) x$quality)
   })
-  supports <- sapply(candidates, function(col) {
-    sapply(col, function(x) x$size)
-  })
 
   candidate.best <- NULL
   quality.max <- NA
-  support.min <- NA
 
   # Find the best candidate by linear search
   for(i in 1:length(qualities)) {
 
     col <- qualities[[i]]
-    sup <- supports[[i]]
 
     for(j in 1:length(col)) {
 
       if(is.na(quality.max) | col[j] > quality.max) {
 
         quality.max <- col[j]
-        support.min <- sup[j]
         candidate.best <- candidates[[i]][[j]]
 
       }
@@ -720,6 +715,29 @@ prim.diversify.compare <- function(X, p.div) {
   return(m)
 }
 
+#' @title Calculate statistical metrics
+#' @description This function calculates the mean, standard deviation, standard error of the mean, 95% confidence intervals
+#' @return A list with elements described above
+#' @author Jurian Baas
+prim.validate.metrics <- function(prim.validate) {
+
+  if(class(prim.validate) != "prim.validate")
+    stop("Supplied argument not of class prim.validate")
+
+  # Name it x for clearer code
+  x <- prim.validate$box.qualities
+
+  result <- list()
+  result$mu <- mean(x)
+  result$sd <- sd(x)
+  # Calculate standard error of the mean
+  result$se <- result$sd / sqrt( length(x) )
+  # Calcualte 95% confidence intervals
+  result$ci <- c(result$mu - 2 * result$se, result$mu + 2 * result$se)
+
+  return(result)
+}
+
 
 #-------------------------------------------------------------------------------------------#
 ################################### S3 PREDICT FUNCTIONS ####################################
@@ -809,6 +827,7 @@ plot.prim.peel <- function(x, ...) {
 #' @importFrom graphics par plot points text
 plot.prim.validate <- function(x, ...) {
   graphics::par(bty = "l")
+
   graphics::plot (
     x$supports,
     x$box.qualities,
@@ -817,6 +836,16 @@ plot.prim.validate <- function(x, ...) {
     xlab = "Support", ylab = "Box quality",
     main = "PRIM validate result",
     ...)
+
+  #graphics::rect(
+  #  xleft = x$supports[which.max(x$box.qualities)] - 2*x$metrics$se,
+  #  ybottom = -1e6,
+  #  xright = x$supports[which.max(x$box.qualities)] + 2*x$metrics$se,
+  #  ytop = 1e6,
+  #  col = "gray95")
+  #graphics::abline(v = x$supports[which.max(x$box.qualities)] - 2*x$metrics$se, lty = 2)
+  #graphics::abline(v = x$supports[which.max(x$box.qualities)] + 2*x$metrics$se, lty = 2)
+
   graphics::lines (
     x$supports,
     x$box.qualities
