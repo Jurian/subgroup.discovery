@@ -1,11 +1,11 @@
 Package: subgroup.discovery
 Type: Package
-Title: Subgroup discovery and bump hunting
-Version: 0.1.0
+Title: Subgroup Discovery and Bump Hunting
+Version: 0.1.2
 Authors@R: c(
           person(given = "Jurian", family = "Baas", email = "jurian@jurianbaas.nl", role = c("aut", "cre", "cph")),
           person(given = "Ad", family ="Feelders", email = "A.J.Feelders@uu.nl", role = c("ctb")))
-Description: This package was developed to assist in discovering interesting subgroups in multi-dimensional data. The PRIM implementation is based on the 1998 paper "Bump hunting in high-dimensional data" by Jerome H. Friedman and Nicholas I. Fisher. PRIM involves finding a set of "rules" which combined imply unusually large (or small) values of some other target variable. Specifially one tries to find a set of subregions in which the target variable is substantially larger than overall mean. The objective of bump hunting in general is to find regions in the input (attribute/feature) space with relatively high (low) values for the target variable. The regions are described by simple rules of the type if: condition-1 and ... and condition-n then: estimated target value. Given the data (or a subset of the data), the goal is to produce a box B within which the target mean is as large as possible. There are many problems where finding such regions is of considerable practical interest.  Often these are problems where a decision maker can in a sense choose or select the values of the input variables so as to optimize the value of the target variable. In bump hunting it is customary to follow a so-called covering strategy. This means that the same box construction (rule induction) algorithm is applied sequentially to subsets of the data.
+Description: Developed to assist in discovering interesting subgroups in high-dimensional data. The PRIM implementation is based on the 1998 paper "Bump hunting in high-dimensional data" by Jerome H. Friedman and Nicholas I. Fisher. PRIM involves finding a set of "rules" which combined imply unusually large (or small) values of some other target variable. Specifically one tries to find a set of sub regions in which the target variable is substantially larger than overall mean. The objective of bump hunting in general is to find regions in the input (attribute/feature) space with relatively high (low) values for the target variable. The regions are described by simple rules of the type if: condition-1 and ... and condition-n then: estimated target value. Given the data (or a subset of the data), the goal is to produce a box B within which the target mean is as large as possible. There are many problems where finding such regions is of considerable practical interest.  Often these are problems where a decision maker can in a sense choose or select the values of the input variables so as to optimize the value of the target variable. In bump hunting it is customary to follow a so-called covering strategy. This means that the same box construction (rule induction) algorithm is applied sequentially to subsets of the data.
 Depends: R (>= 2.10)
 License: GPL-3
 Encoding: UTF-8
@@ -13,5 +13,5 @@ LazyData: true
 RoxygenNote: 6.0.1
 URL: https://github.com/Jurian/subgroup.discovery
 BugReports: https://github.com/Jurian/subgroup.discovery/issues
-Date: 2017-06-15
+Date: 2017-07-15
 Suggests: testthat

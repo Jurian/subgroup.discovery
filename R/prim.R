@@ -717,8 +717,10 @@ prim.diversify.compare <- function(X, p.div) {
 
 #' @title Calculate statistical metrics
 #' @description This function calculates the mean, standard deviation, standard error of the mean, 95% confidence intervals
+#' @param prim.validate An object of type "prim validate"
 #' @return A list with elements described above
 #' @author Jurian Baas
+#' @importFrom stats sd
 prim.validate.metrics <- function(prim.validate) {
 
   if(class(prim.validate) != "prim.validate")
@@ -729,7 +731,7 @@ prim.validate.metrics <- function(prim.validate) {
 
   result <- list()
   result$mu <- mean(x)
-  result$sd <- sd(x)
+  result$sd <- stats::sd(x)
   # Calculate standard error of the mean
   result$se <- result$sd / sqrt( length(x) )
   # Calcualte 95% confidence intervals
