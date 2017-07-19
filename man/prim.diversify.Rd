@@ -40,6 +40,30 @@ Provide a (hopefully) diverse number of box definitions
 \details{
 Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split.
 }
+\examples{
+  data(ames)
+  p.div <- prim.diversify(
+      SalePrice ~ . - PID - Order,
+      data = ames,
+      n = 10,
+      peeling.quantile = 0.05,
+      min.support = 0.05
+  )
+  \dontrun{
+  summary(p.div)
+  plot(p.div)
+
+  # One can also plot intermediate results during the diversify process:
+  p.div <- prim.diversify(
+      SalePrice ~ . - PID - Order,
+      data = ames,
+      n = 10,
+      peeling.quantile = 0.05,
+      min.support = 0.05,
+      plot = TRUE
+  )
+  }
+}
 \author{
 Jurian Baas
 }
