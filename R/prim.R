@@ -97,7 +97,7 @@ prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.p
   repeat {
 
     # In case:
-    # The user set a max nr of boxes and we reached that limit
+    # The user set a max number of boxes and we reached that limit
     # Current cover has become too small
     # Current box quality fell below overall quality
     if((!is.na(max.boxes) & box.nr > max.boxes) | (nrow(X) < N) | y.sub.quality < y.global.quality ) {
@@ -999,7 +999,7 @@ plot.prim.diversify <- function(x, ...) {
 #' @param object An S3 object of class prim.peel
 #' @param ... Optional arguments to pass on
 #' @param round Optional setting to disable rounding
-#' @param digits Optional setting to control nr of digits to round
+#' @param digits Optional setting to control number of digits to round
 #' @author Jurian Baas
 #' @return Nothing, this function is called for its side-effects
 #' @export
@@ -1030,7 +1030,7 @@ summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
 #' @param object An S3 object of class prim.validate
 #' @param ... Optional arguments to pass on
 #' @param round Optional setting to disable rounding
-#' @param digits Optional setting to control nr of digits to round
+#' @param digits Optional setting to control number of digits to round
 #' @author Jurian Baas
 #' @return Nothing, this function is called for its side-effects
 #' @export
@@ -1061,7 +1061,7 @@ summary.prim.validate <- function(object, ..., round = TRUE, digits = 2) {
 #' @param object An S3 object of class prim.cover
 #' @param ... Optional arguments to pass on
 #' @param round Optional setting to disable rounding
-#' @param digits Optional setting to control nr of digits to round
+#' @param digits Optional setting to control number of digits to round
 #' @author Jurian Baas
 #' @return Nothing, this function is called for its side-effects
 #' @export
@@ -1111,7 +1111,7 @@ summary.prim.cover <- function(object, ..., round = TRUE, digits = 2) {
 #' @param object An S3 object of class prim.diversify
 #' @param ... Optional arguments to pass on
 #' @param round Optional setting to disable rounding
-#' @param digits Optional setting to control nr of digits to round
+#' @param digits Optional setting to control number of digits to round
 #' @author Jurian Baas
 #' @return Nothing, this function is called for its side-effects
 #' @export
