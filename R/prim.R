@@ -248,7 +248,7 @@ prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support
   result$support <- nrow(X)
   result$overall.quality <- quality.function(y)
 
-  attempts <- parallel::parLapply(cl, 1:n, function(i) {
+  result$attempts <- parallel::parLapply(cl, 1:n, function(i) {
 
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
@@ -279,9 +279,15 @@ prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support
 
   parallel::stopCluster(cl)
 
-  result$attempts <- attempts
   result$scoreMatrix <- prim.diversify.compare(X, result)
   result$scores <- rowMeans(result$scoreMatrix, na.rm = TRUE)
+
+  dat <- data.frame(t(sapply(result$attempts, function(a) {
+    c( supports = a$att.box.support / result$support,
+       box.qualities = a$att.box.quality)
+  })))
+
+  result$frontier <- quasi.convex.hull(dat)
 
   if(using.formula) result$formula <- formula
 
@@ -961,13 +967,15 @@ plot.prim.cover <- function(x, ...) {
 #' @export
 #' @importFrom graphics par plot points text
 plot.prim.diversify <- function(x, ...) {
+
   dat <- data.frame(t(sapply(x$attempts, function(a) {
     c( supports = a$att.box.support / x$support,
        box.qualities = a$att.box.quality)
   })))
 
-  frontier.index <- quasi.convex.hull(dat)
+  frontier.index <- x$frontier
   frontier <- dat[frontier.index,]
+  dominated <- dat[-frontier.index,]
 
   graphics::par(bty = "l")
   graphics::plot (
@@ -984,14 +992,18 @@ plot.prim.diversify <- function(x, ...) {
     col = "ivory4"
   )
   graphics::points (
-    dat$supports,
-    dat$box.qualities,
-    col= "royalblue4", pch = 19, cex = 1, lty = "solid", lwd = 2)
+    dominated$supports,
+    dominated$box.qualities,
+    col= "royalblue2", pch = 4, cex = 1, lty = "solid", lwd = 2)
+  graphics::points (
+    frontier$supports,
+    frontier$box.qualities,
+    col= "royalblue4", pch = 19, cex = 1.25, lty = "solid", lwd = 2)
   graphics::text (
     frontier$supports,
     frontier$box.qualities,
     labels = frontier.index,
-    cex = 0.7, pos = 3, col = "orangered4", font = 2)
+    cex = 0.85, pos = 3, col = "orangered4", font = 2)
 
 
 }
@@ -1150,12 +1162,14 @@ summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
       apply(formatC(round(object$scoreMatrix, 2), format = "f", digits = 2), 1, paste, collapse = "\t"))
     , collapse = "\n  |  ")
     )
-  cat("\n")
-  for(i in 1:length(object$attempts)) {
-    x <- object$attempts[[i]]
+  cat("\n\n\n")
+  cat("  Dominating attempts:","\n")
+  frontier <- sort(object$frontier)
+  for(i in seq_along(frontier)) {
+    x <- object$attempts[[frontier[i]]]
     cat("\n")
     cat("  ======================================", "\n")
-    cat("  ============= ATTEMPT", i,"==============", "\n")
+    cat("  ============= ATTEMPT", frontier[i],"==============", "\n")
     cat("  |  Score:", round(object$scores[i], digits), "\n")
     cat("  |  Box quality: ", round(x$att.box.quality, digits), "(", round(x$att.box.quality / object$overall.quality, digits), ") \n")
     cat("  |  Box support: ", round(x$att.box.support / object$support, digits) , " (", x$att.box.support, ") \n")
