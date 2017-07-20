@@ -29,8 +29,11 @@
 #'       min.support = 0.1,
 #'       plot = TRUE
 #'   )
+#'
+#'   \dontrun{
 #'   summary(p.cov)
 #'   plot(p.cov)
+#'   }
 #' @export
 prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
 
@@ -149,7 +152,7 @@ prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.p
 
 #' @title PRIM diversify strategy
 #' @description Provide a (hopefully) diverse number of box definitions
-#' @details Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split.
+#' @details Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split. Each run is independent from the others, so this algorithm is run in parallel by default.
 #' @param formula Formula with a response and terms
 #' @param data Data frame to find rules in
 #' @param X Optionally instead of using a formula: Data frame to find rules in
@@ -161,10 +164,12 @@ prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.p
 #' @param train.fraction Optional train-test split fraction used in validation, defaults to 0.66
 #' @param quality.function Optional setting for function to use for determining subset quality, defaults to mean
 #' @param plot Optional setting to plot intermediate results, defaults to false
+#' @param parallel Optional setting to compute each run in parallel, defaults to TRUE. This will use all cores except one.
 #' @return An S3 object of type prim.diversify
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response complete.cases terms
 #' @importFrom graphics plot par
+#' @importFrom parallel detectCores makeCluster parLapply stopCluster
 #' @examples
 #'   data(ames)
 #'   p.div <- prim.diversify(
@@ -173,12 +178,16 @@ prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.p
 #'       n = 5,
 #'       peeling.quantile = 0.05,
 #'       min.support = 0.05,
-#'       plot = TRUE
+#'       plot = TRUE,
+#'       parallel = FALSE
 #'   )
+#'
+#'   \dontrun{
 #'   summary(p.div)
 #'   plot(p.div)
+#'   }
 #' @export
-prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
+prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE, parallel = TRUE) {
 
   using.formula <- missing(X) & missing(y)
 
@@ -216,6 +225,16 @@ prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support
   if(train.fraction <= 0) stop("Training fraction must be positive")
   if(train.fraction >= 1) stop("Training fraction must be a fraction smaller than 1")
 
+  if(parallel) {
+    # Calculate the number of cores
+    nr_cores <- parallel::detectCores() - 1
+
+    # Initiate cluster
+    cl <- parallel::makeCluster(nr_cores)
+  } else {
+    cl <- parallel::makeCluster(1)
+  }
+
   result <- list()
   class(result) <- "prim.diversify"
 
@@ -229,7 +248,7 @@ prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support
   result$support <- nrow(X)
   result$overall.quality <- quality.function(y)
 
-  for(i in 1:n) {
+  attempts <- parallel::parLapply(cl, 1:n, function(i) {
 
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
@@ -255,8 +274,10 @@ prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support
     p.validate$att.box.support <- sum(idx)
     p.validate$att.box.quality <- quality.function(y[idx])
 
-    attempts <- c(attempts, list(p.validate))
-  }
+    return(p.validate)
+  })
+
+  parallel::stopCluster(cl)
 
   result$attempts <- attempts
   result$scoreMatrix <- prim.diversify.compare(X, result)
@@ -944,6 +965,10 @@ plot.prim.diversify <- function(x, ...) {
     c( supports = a$att.box.support / x$support,
        box.qualities = a$att.box.quality)
   })))
+
+  frontier.index <- quasi.convex.hull(dat)
+  frontier <- dat[frontier.index,]
+
   graphics::par(bty = "l")
   graphics::plot (
     dat$supports,
@@ -952,15 +977,23 @@ plot.prim.diversify <- function(x, ...) {
     xlab = "Support", ylab = "Box quality",
     main = "PRIM diversify result",
     ...)
+  graphics::lines (
+    x = frontier$supports,
+    y = frontier$box.qualities,
+    lwd = 2,
+    col = "ivory4"
+  )
   graphics::points (
     dat$supports,
     dat$box.qualities,
     col= "royalblue4", pch = 19, cex = 1, lty = "solid", lwd = 2)
   graphics::text (
-    dat$supports,
-    dat$box.qualities,
-    labels = paste("Attempt", 1 : length(x$attempts)),
-    cex = 0.7, pos = 1, col = "orangered4", font = 2)
+    frontier$supports,
+    frontier$box.qualities,
+    labels = frontier.index,
+    cex = 0.7, pos = 3, col = "orangered4", font = 2)
+
+
 }
 
 
@@ -1133,3 +1166,26 @@ summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
 
   }
 }
+
+#-------------------------------------------------------------------------------------------#
+################################### MISC HELPER FUNCTIONS ###################################
+#-------------------------------------------------------------------------------------------#
+
+#' @title Calculate a frontier of dominating points
+#' @description During the diversify process, we are really only interested in the attempts which dominate all others in performance.
+#' @param X A matrix or data frame with two columns
+#' @author William Huber
+#' @return A vector of indexes for the dominating points
+#' @seealso \url{https://stats.stackexchange.com/a/65157}
+quasi.convex.hull <- function(X) {
+  i <- order(X[, 1], X[, 2], decreasing = TRUE)
+  y <- X[i, 2]
+  frontier <- which(cummax(y) <= y)
+  #
+  # Eliminate interior points along edges of the hull.
+  #
+  y.0 <- y[frontier]
+  frontier <- frontier[c(TRUE, y.0[-1] != y.0[-length(y.0)])]
+  return(i[frontier])
+}
+
