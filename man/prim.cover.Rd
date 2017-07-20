@@ -43,21 +43,11 @@ In bump hunting it is customary to follow a so-called covering strategy. This me
       class ~ .,
       data = pima,
       peeling.quantile = 0.05,
-      min.support = 0.1
-  )
-  \dontrun{
-  summary(p.cov)
-  plot(p.cov)
-
-  # One can also plot intermediate results during the cover process:
-  p.cov <- prim.cover(
-      class ~ .,
-      data = pima,
-      peeling.quantile = 0.05,
       min.support = 0.1,
       plot = TRUE
   )
-  }
+  summary(p.cov)
+  plot(p.cov)
 }
 \author{
 Jurian Baas

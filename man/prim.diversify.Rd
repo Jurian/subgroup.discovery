@@ -45,24 +45,13 @@ Because the final box depends on the data used, we re-run the PRIM peeling algor
   p.div <- prim.diversify(
       SalePrice ~ . - PID - Order,
       data = ames,
-      n = 10,
-      peeling.quantile = 0.05,
-      min.support = 0.05
-  )
-  \dontrun{
-  summary(p.div)
-  plot(p.div)
-
-  # One can also plot intermediate results during the diversify process:
-  p.div <- prim.diversify(
-      SalePrice ~ . - PID - Order,
-      data = ames,
-      n = 10,
+      n = 5,
       peeling.quantile = 0.05,
       min.support = 0.05,
       plot = TRUE
   )
-  }
+  summary(p.div)
+  plot(p.div)
 }
 \author{
 Jurian Baas

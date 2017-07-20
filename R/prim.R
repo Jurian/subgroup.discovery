@@ -26,21 +26,11 @@
 #'       class ~ .,
 #'       data = pima,
 #'       peeling.quantile = 0.05,
-#'       min.support = 0.1
-#'   )
-#'   \dontrun{
-#'   summary(p.cov)
-#'   plot(p.cov)
-#'
-#'   # One can also plot intermediate results during the cover process:
-#'   p.cov <- prim.cover(
-#'       class ~ .,
-#'       data = pima,
-#'       peeling.quantile = 0.05,
 #'       min.support = 0.1,
 #'       plot = TRUE
 #'   )
-#'   }
+#'   summary(p.cov)
+#'   plot(p.cov)
 #' @export
 prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, max.boxes = NA, quality.function = base::mean, plot = FALSE) {
 
@@ -180,24 +170,13 @@ prim.cover <- function(formula, data, X, y, peeling.quantile, min.support, max.p
 #'   p.div <- prim.diversify(
 #'       SalePrice ~ . - PID - Order,
 #'       data = ames,
-#'       n = 10,
-#'       peeling.quantile = 0.05,
-#'       min.support = 0.05
-#'   )
-#'   \dontrun{
-#'   summary(p.div)
-#'   plot(p.div)
-#'
-#'   # One can also plot intermediate results during the diversify process:
-#'   p.div <- prim.diversify(
-#'       SalePrice ~ . - PID - Order,
-#'       data = ames,
-#'       n = 10,
+#'       n = 5,
 #'       peeling.quantile = 0.05,
 #'       min.support = 0.05,
 #'       plot = TRUE
 #'   )
-#'   }
+#'   summary(p.div)
+#'   plot(p.div)
 #' @export
 prim.diversify <- function(formula, data, X, y, n, peeling.quantile, min.support, max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean, plot = FALSE) {
 
