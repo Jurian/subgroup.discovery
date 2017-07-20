@@ -6,7 +6,7 @@
 \usage{
 prim.diversify(formula, data, X, y, n, peeling.quantile, min.support,
   max.peel = 0.1, train.fraction = 0.66, quality.function = base::mean,
-  plot = FALSE)
+  plot = FALSE, parallel = TRUE)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -30,6 +30,8 @@ prim.diversify(formula, data, X, y, n, peeling.quantile, min.support,
 \item{quality.function}{Optional setting for function to use for determining subset quality, defaults to mean}
 
 \item{plot}{Optional setting to plot intermediate results, defaults to false}
+
+\item{parallel}{Optional setting to compute each run in parallel, defaults to TRUE. This will use all cores except one.}
 }
 \value{
 An S3 object of type prim.diversify
@@ -38,7 +40,7 @@ An S3 object of type prim.diversify
 Provide a (hopefully) diverse number of box definitions
 }
 \details{
-Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split.
+Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split. Each run is independent from the others, so this algorithm is run in parallel by default.
 }
 \examples{
   data(ames)
@@ -48,10 +50,14 @@ Because the final box depends on the data used, we re-run the PRIM peeling algor
       n = 5,
       peeling.quantile = 0.05,
       min.support = 0.05,
-      plot = TRUE
+      plot = TRUE,
+      parallel = FALSE
   )
+
+  \dontrun{
   summary(p.div)
   plot(p.div)
+  }
 }
 \author{
 Jurian Baas
