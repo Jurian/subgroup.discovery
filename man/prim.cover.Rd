@@ -46,8 +46,11 @@ In bump hunting it is customary to follow a so-called covering strategy. This me
       min.support = 0.1,
       plot = TRUE
   )
+
+  \dontrun{
   summary(p.cov)
   plot(p.cov)
+  }
 }
 \author{
 Jurian Baas
