@@ -16,7 +16,7 @@ Often these are problems where a decision maker can in a sense choose or select 
 
 Developed by Jurian Baas, part of master thesis in Artificial Intelligence.
 
-Special thanks for contributions such as tips and bug-fixing to dr. A.J. Feelders, Utrecht University, Department of Information and Computing Sciences
+Special thanks for contributions such as suggestions and bug-fixing to Dr. A.J. Feelders, Utrecht University, Department of Information and Computing Sciences
 
 ## References
 
