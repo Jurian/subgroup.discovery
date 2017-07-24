@@ -1289,7 +1289,7 @@ quasi.convex.hull <- function(X) {
   y <- X[i, 2]
   frontier <- which(cummax(y) <= y)
   #
-  # Eliminate interior points along edges of the hull.
+  # Eliminate interior points along edges of the hull
   #
   y.0 <- y[frontier]
   frontier <- frontier[c(TRUE, y.0[-1] != y.0[-length(y.0)])]
