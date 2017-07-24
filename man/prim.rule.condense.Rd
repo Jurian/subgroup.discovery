@@ -7,7 +7,7 @@
 prim.rule.condense(prim.object)
 }
 \arguments{
-\item{prim.object}{An S3 object of class prim.peel or prim.validate}
+\item{prim.object}{An S3 object of class prim.validate}
 }
 \value{
 The condensed rule as a single string

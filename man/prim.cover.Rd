@@ -4,9 +4,10 @@
 \alias{prim.cover}
 \title{PRIM covering strategy}
 \usage{
-prim.cover(formula, data, X, y, peeling.quantile, min.support, max.peel = 0.1,
-  train.fraction = 0.66, max.boxes = NA, quality.function = base::mean,
-  plot = FALSE)
+prim.cover(formula, data, X, y, peeling.quantile = 0.03, min.support = 0.05,
+  max.peel = 0.1, train.fraction = 0.66, max.boxes = NA,
+  quality.function = base::mean, plot = FALSE, optimal.box = c("best",
+  "2se"))
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -25,11 +26,13 @@ prim.cover(formula, data, X, y, peeling.quantile, min.support, max.peel = 0.1,
 
 \item{train.fraction}{Train-test split fraction used in validation, defaults to 0.66}
 
-\item{max.boxes}{Optional maximum number of boxes}
+\item{max.boxes}{Maximum number of boxes, NA or leave out for no limit}
 
-\item{quality.function}{Optional setting for function to use for determining subset quality, defaults to mean}
+\item{quality.function}{Function to use for determining set quality, defaults to mean}
 
-\item{plot}{Optional setting to plot intermediate results, defaults to false}
+\item{plot}{Plot intermediate results, defaults to false}
+
+\item{optimal.box}{During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum}
 }
 \value{
 An S3 object of class prim.cover
@@ -47,7 +50,7 @@ In bump hunting it is customary to follow a so-called covering strategy. This me
       plot = TRUE
   )
 
-  \dontrun{
+  \donttest{
   summary(p.cov)
   plot(p.cov)
   }
