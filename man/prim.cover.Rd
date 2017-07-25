@@ -47,7 +47,8 @@ In bump hunting it is customary to follow a so-called covering strategy. This me
       data = pima,
       peeling.quantile = 0.05,
       min.support = 0.1,
-      plot = TRUE
+      plot = TRUE,
+      optimal.box = "2se"
   )
 
   \donttest{

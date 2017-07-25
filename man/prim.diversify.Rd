@@ -30,9 +30,9 @@ prim.diversify(formula, data, X, y, n, peeling.quantile = 0.03,
 
 \item{quality.function}{Function to use for determining subset quality, defaults to mean}
 
-\item{plot}{Plot intermediate results, defaults to false}
+\item{plot}{Plot intermediate results, defaults to false. Note that intermediate plotting is unavailable when running in parallel}
 
-\item{parallel}{Compute each run in parallel, defaults to TRUE. This will use all but one core}
+\item{parallel}{Compute each run in parallel, defaults to TRUE. This will use all but one core. Note that intermediate plotting is unavailable when running in parallel}
 
 \item{optimal.box}{During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum}
 }
@@ -51,10 +51,9 @@ Because the final box depends on the data used, we re-run the PRIM peeling algor
       SalePrice ~ . - PID - Order,
       data = ames,
       n = 5,
-      peeling.quantile = 0.05,
-      min.support = 0.05,
       plot = TRUE,
-      parallel = FALSE
+      parallel = FALSE,
+      optimal.box = "best"
   )
 
   \donttest{

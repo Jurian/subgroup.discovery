@@ -4,13 +4,14 @@
 \alias{prim.peel}
 \title{Bump hunting using the Patient Rule Induction Method}
 \usage{
-prim.peel(X, y, peeling.quantile, min.support, max.peel,
-  quality.function = base::mean)
+prim.peel(X, y, N, peeling.quantile, min.support, max.peel, quality.function)
 }
 \arguments{
 \item{X}{Data frame to find rules in}
 
 \item{y}{Response vector, usually of type numeric}
+
+\item{N}{Size of entire data set}
 
 \item{peeling.quantile}{Quantile to peel off for numerical variables}
 
@@ -18,7 +19,7 @@ prim.peel(X, y, peeling.quantile, min.support, max.peel,
 
 \item{max.peel}{Maximal size of a peel, as fraction}
 
-\item{quality.function}{Which function to use to determine the quality of a box, defaults to mean}
+\item{quality.function}{Which function to use to determine the quality of a box}
 }
 \value{
 An S3 object of class prim.peel
