@@ -178,8 +178,8 @@ prim.cover <- function (
 #' @param max.peel Maximal size of a peel, as a fraction. Defaults to 0.1
 #' @param train.fraction Train-test split fraction used in validation, defaults to 0.66
 #' @param quality.function Function to use for determining subset quality, defaults to mean
-#' @param plot Plot intermediate results, defaults to false
-#' @param parallel Compute each run in parallel, defaults to TRUE. This will use all but one core
+#' @param plot Plot intermediate results, defaults to false. Note that intermediate plotting is unavailable when running in parallel
+#' @param parallel Compute each run in parallel, defaults to TRUE. This will use all but one core. Note that intermediate plotting is unavailable when running in parallel
 #' @param optimal.box During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum
 #' @return An S3 object of type prim.diversify
 #' @author Jurian Baas
@@ -267,6 +267,8 @@ prim.diversify <- function (
   result$support <- nrow(X)
   result$overall.quality <- quality.function(y)
 
+  # Define a seperate function so we can use a parallel approach if wanted
+  # but also fall back on a default method
   peel.and.validate <- function(i) {
     train <- sample(1:nrow(X), nrow(X) * train.fraction)
 
@@ -310,18 +312,13 @@ prim.diversify <- function (
     parallel::stopCluster(cl)
 
   } else {
+    # Fall back on the default method
     result$attempts <- lapply(1:n, peel.and.validate)
   }
 
+  result$frontier <- quasi.convex.hull(result)
   result$scoreMatrix <- prim.diversify.compare(X, result)
   result$scores <- rowMeans(result$scoreMatrix, na.rm = TRUE)
-
-  dat <- data.frame(t(sapply(result$attempts, function(a) {
-    c( supports = a$att.box.support / result$support,
-       box.qualities = a$att.box.quality)
-  })))
-
-  result$frontier <- quasi.convex.hull(dat)
 
   if(using.formula) result$formula <- formula
 
@@ -811,14 +808,17 @@ prim.diversify.compare <- function(X, p.div) {
   if(class(p.div) != "prim.diversify")
     stop("Argument is not of class prim.diversify")
 
-  nr.of.attempts <- length(p.div$attempts)
+  frontier <- sort(p.div$frontier)
+  nr.of.attempts <- length(frontier)
   idx <- combn(1:nr.of.attempts, 2)
   scores <- apply(idx, 2, function(i) {
-    sum(prim.rule.operations(X, p.div$attempts[i], "intersect")) / sum(prim.rule.operations(X, p.div$attempts[i], "union"))
+    sum(prim.rule.operations(X, p.div$attempts[frontier[i]], "intersect")) / sum(prim.rule.operations(X, p.div$attempts[frontier[i]], "union"))
   })
   m <- matrix(ncol = nr.of.attempts, nrow = nr.of.attempts)
   m[t(idx)] <- scores
   m[t(idx[ nrow(idx):1, ])] <- scores
+  colnames(m) <- frontier
+  rownames(m) <- frontier
   return(m)
 }
 
@@ -1096,7 +1096,7 @@ plot.prim.diversify <- function(x, ...) {
     frontier$supports,
     frontier$box.qualities,
     labels = frontier.index,
-    cex = 0.85, pos = 3, col = "orangered4", font = 2)
+    cex = 0.85, adj = -c(0.5,0.5), col = "orangered4", font = 2)
 
 
 }
@@ -1280,11 +1280,20 @@ summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
 
 #' @title Calculate a frontier of dominating points
 #' @description During the diversify process, we are really only interested in the attempts which dominate all others in performance.
-#' @param X A matrix or data frame with two columns
-#' @author William Huber
+#' @param p.div An object of type "prim.diversify"
+#' @author William Huber & Jurian Baas
 #' @return A vector of indexes for the dominating points
 #' @seealso \url{https://stats.stackexchange.com/a/65157}
-quasi.convex.hull <- function(X) {
+quasi.convex.hull <- function(p.div) {
+
+  if(class(p.div) != "prim.diversify")
+    stop("Parameter not of class prim.diversify")
+
+  X <- data.frame(t(sapply(p.div$attempts, function(a) {
+    c( supports = a$att.box.support / p.div$support,
+       box.qualities = a$att.box.quality)
+  })))
+
   i <- order(X[, 1], X[, 2], decreasing = TRUE)
   y <- X[i, 2]
   frontier <- which(cummax(y) <= y)
