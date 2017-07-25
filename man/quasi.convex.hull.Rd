@@ -4,10 +4,10 @@
 \alias{quasi.convex.hull}
 \title{Calculate a frontier of dominating points}
 \usage{
-quasi.convex.hull(X)
+quasi.convex.hull(p.div)
 }
 \arguments{
-\item{X}{A matrix or data frame with two columns}
+\item{p.div}{An object of type "prim.diversify"}
 }
 \value{
 A vector of indexes for the dominating points
@@ -19,5 +19,5 @@ During the diversify process, we are really only interested in the attempts whic
 \url{https://stats.stackexchange.com/a/65157}
 }
 \author{
-William Huber
+William Huber & Jurian Baas
 }
