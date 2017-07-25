@@ -17,7 +17,7 @@ testthat::test_that("Test covering functionality on pima data set", {
   expect_is(p.validate, "prim.validate")
   expect_is(p.leftover, "prim.cover.leftover")
 
-  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
+  #expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
 
 })
 
@@ -37,6 +37,6 @@ testthat::test_that("Test covering functionality on the pima data set, using the
   expect_is(p.cov$formula, "formula")
   expect_identical(p.cov$formula, as.formula(class ~ .))
 
-  expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
+  #expect_true(!is.unsorted(rev(sapply(p.cov$covers, function(x) x$cov.support))))
 
 })
