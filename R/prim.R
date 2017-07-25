@@ -266,6 +266,8 @@ prim.diversify <- function (
   if(length(optimal.box) > 1) optimal.box <- optimal.box[1]
   if(!optimal.box %in% c("best", "2se")) stop("Invalid optimal box paramter")
 
+  if(plot & parallel) message("Note: Plotting intermediate results is unavailable while running in parallel")
+
   result <- list()
   class(result) <- "prim.diversify"
 
@@ -307,7 +309,7 @@ prim.diversify <- function (
 
     idx <- prim.rule.match(p.validate, X)
 
-    p.validate$final.box.support <- sum(idx)
+    p.validate$final.box.N <- sum(idx)
     p.validate$final.box.quality <- quality.function(y[idx])
 
     return(p.validate)
@@ -323,6 +325,7 @@ prim.diversify <- function (
     result$attempts <- tryCatch({
       parallel::parLapply(cl, 1:n, peel.and.validate)
     }, finally = {
+      # Make sure we ALWAYS stop the cluster neatly
       parallel::stopCluster(cl)
     })
 
@@ -515,6 +518,8 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
   candidates <- list()
   cnames <- colnames(X)
 
+  N <- nrow(X)
+
   repeat {
 
     if(i > ncol(X)) break
@@ -522,8 +527,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
     r <- list()
 
     col <- X[,i]
-
-    N <- nrow(X)
 
     # Do something different depending on data type
     if(is.numeric(col)) {
@@ -549,7 +552,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
           type = "numeric",
           quality = quality.function(y[!idx.left]),
           idx = which(idx.left),
-          #size = left.support / N,
           colname = cnames[i]
         )
       }
@@ -561,7 +563,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
           type = "numeric",
           quality = quality.function(y[!idx.right]),
           idx = which(idx.right),
-          #size = right.support / N,
           colname = cnames[i]
         )
       }
@@ -584,7 +585,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
             type = "logical",
             quality = quality.function(y[!idx.true]),
             idx = which(idx.true),
-            #size = sum(idx.true) / N,
             colname = cnames[i]
           )
         }
@@ -595,7 +595,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
             type = "logical",
             quality = quality.function(y[!idx.false]),
             idx = which(idx.false),
-            #size = sum(idx.false) / N,
             colname = cnames[i]
           )
         }
@@ -627,7 +626,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
               type = "factor",
               quality = quality.function(y[!idx]),
               idx = which(idx),
-              #size = support.lvl / N,
               colname = cnames[i]
             )
           }
@@ -850,14 +848,18 @@ prim.validate.metrics <- function(prim.validate) {
 
   # Name it x for clearer code
   x <- prim.validate$box.qualities
+  n <- length(x)
 
   metrics <- list()
-  metrics$mu <- mean(x)
-  metrics$sd <- stats::sd(x)
+
+  # Calculate sample standard deviation
+  ssd <-  sqrt(sum((x - mean(x))^2) / (n - 1))
+
   # Calculate standard error of the mean
-  metrics$se <- metrics$sd / sqrt( length(x) )
-  # Calcualte 95% confidence intervals
-  #result$ci <- c(result$mu - 2 * result$se, result$mu + 2 * result$se)
+  metrics$se <- ssd / sqrt(n)
+  # Calculate standard deviation of sample mean
+  metrics$sd <- stats::sd(x) / sqrt(n)
+
 
   return(metrics)
 }
@@ -1074,7 +1076,7 @@ plot.prim.cover <- function(x, ...) {
 plot.prim.diversify <- function(x, ...) {
 
   dat <- data.frame(t(sapply(x$attempts, function(a) {
-    c( supports = a$final.box.support / x$N,
+    c( supports = a$final.box.N / x$N,
        box.qualities = a$final.box.quality)
   })))
 
@@ -1256,7 +1258,7 @@ summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
   cat("  |  Min support:", object$min.support, "\n")
   cat("  |  Train/test split:", object$train.fraction, "\n")
   cat("  |\n")
-  cat("  |  Set support: ", object$support, "\n")
+  cat("  |  Set size: ", object$N, "\n")
   cat("  |  Set quality: ", round(object$global.quality, digits), "\n")
   cat("\n")
   cat("  Scores:", "\n  | ")
@@ -1277,7 +1279,7 @@ summary.prim.diversify <- function(object, ..., round = TRUE, digits = 2) {
     cat("  ============= ATTEMPT", frontier[i],"==============", "\n")
     cat("  |  Score:", round(object$scores[i], digits), "\n")
     cat("  |  Box quality: ", round(x$final.box.quality, digits), "(", round(x$final.box.quality / object$global.quality, digits), ") \n")
-    cat("  |  Box support: ", round(x$final.box.support / object$support, digits) , " (", x$final.box.support, ") \n")
+    cat("  |  Box support: ", round(x$final.box.N / object$N, digits) , " (", x$final.box.N, ") \n")
     cat("\n")
     cat("  ================ RULES ===============", "\n")
     cat("  | ", paste0(x$superrule, collapse = "\n  |  "))
@@ -1302,7 +1304,7 @@ quasi.convex.hull <- function(p.div) {
     stop("Parameter not of class prim.diversify")
 
   X <- data.frame(t(sapply(p.div$attempts, function(a) {
-    c( supports = a$final.box.support / p.div$N,
+    c( supports = a$final.box.N / p.div$N,
        box.qualities = a$final.box.quality)
   })))
 
