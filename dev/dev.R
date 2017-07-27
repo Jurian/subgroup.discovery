@@ -10,7 +10,7 @@ plot(p.cov)
 
 
 data(pima)
-p.div <- prim.diversify(class ~ ., data = pima, n = 10, plot = TRUE, parallel = FALSE, optimal.box = "2se")
+p.div <- prim.diversify(class ~ ., data = pima, n = 100, plot = TRUE, parallel = TRUE, optimal.box = "2se")
 summary(p.div)
 plot(p.div)
 

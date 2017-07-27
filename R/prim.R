@@ -379,7 +379,14 @@ prim.peel <- function(X, y, N, peeling.quantile, min.support, max.peel, quality.
 
     if(length(candidates) == 0) break
 
-    cf  <- candidates[[which.max(sapply(candidates, function(c){c$quality}))]]
+    # Find the candidate with the highest quality and break ties by support
+    max.idx <- order (
+      sapply(candidates, function(c) c$quality),
+      sapply(candidates, function(c) c$support),
+      decreasing = TRUE
+    )[1]
+
+    cf  <- candidates[[max.idx]]
 
     if(cf$type == "factor") {
       cf$value <- paste0("'", cf$value, "'")
@@ -549,6 +556,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
           operator = ">=",
           type = "numeric",
           quality = quality.function(y[!idx.left]),
+          support = left.support / N,
           idx = which(idx.left),
           colname = cnames[i]
         )))
@@ -560,6 +568,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
           operator = "<=",
           type = "numeric",
           quality = quality.function(y[!idx.right]),
+          support = right.support / N,
           idx = which(idx.right),
           colname = cnames[i]
         )))
@@ -582,6 +591,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
             operator = "==",
             type = "logical",
             quality = quality.function(y[!idx.true]),
+            support = support.true / N,
             idx = which(idx.true),
             colname = cnames[i]
           )))
@@ -592,6 +602,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
             operator = "==",
             type = "logical",
             quality = quality.function(y[!idx.false]),
+            support = support.false / N,
             idx = which(idx.false),
             colname = cnames[i]
           )))
@@ -623,6 +634,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
               operator = "!=",
               type = "factor",
               quality = quality.function(y[!idx]),
+              support = support.lvl / N,
               idx = which(idx),
               colname = cnames[i]
             )))
