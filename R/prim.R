@@ -129,9 +129,7 @@ prim.cover <- function (
       quality.function = quality.function
     )
     p.peel$global.quality <- quality.function(y[train])
-    p.validate <- prim.validate(p.peel, X[-train,], y[-train])
-    p.validate$optimal.box <- optimal.box
-    p.validate$best.box.idx <- prim.box.optimal(p.validate)
+    p.validate <- prim.validate(p.peel, X[-train,], y[-train], optimal.box)
 
     idx <- prim.rule.match(p.validate, X)
 
@@ -296,9 +294,7 @@ prim.diversify <- function (
       quality.function = quality.function)
     p.peel$global.quality <- result$global.quality
 
-    p.validate <- prim.validate(p.peel, X[-train,], y[-train])
-    p.validate$optimal.box <- optimal.box
-    p.validate$best.box.idx <- prim.box.optimal(p.validate)
+    p.validate <- prim.validate(p.peel, X[-train,], y[-train], optimal.box)
 
     if(plot) {
       graphics::par(mfrow = c(1,2))
@@ -383,7 +379,7 @@ prim.peel <- function(X, y, N, peeling.quantile, min.support, max.peel, quality.
 
     if(length(candidates) == 0) break
 
-    cf  <- prim.candidates.best(candidates)
+    cf  <- candidates[[which.max(sapply(candidates, function(c){c$quality}))]]
 
     if(cf$type == "factor") {
       cf$value <- paste0("'", cf$value, "'")
@@ -419,9 +415,10 @@ prim.peel <- function(X, y, N, peeling.quantile, min.support, max.peel, quality.
 #' @param peel.result An S3 object of class prim.peel
 #' @param X A data frame with at least those columns that were used in creating the prim.peel S3 object
 #' @param y Response vector, usually of type numeric
+#' @param optimal.box Choose the box with the highest quality or a simpler box, two standard errors from the optimum
 #' @return An S3 object of type prim.validate
 #' @author Jurian Baas
-prim.validate <- function(peel.result, X, y) {
+prim.validate <- function(peel.result, X, y, optimal.box) {
 
   if(class(peel.result) != "prim.peel") {
     stop("Supplied argument is not of class prim.peel, aborting...")
@@ -443,7 +440,7 @@ prim.validate <- function(peel.result, X, y) {
   result$quality.function <- peel.result$quality.function
   result$N <- peel.result$N
   result$global.quality <- peel.result$global.quality
-
+  result$optimal.box <- optimal.box
   validate.N <- nrow(X)
 
   i <- 1
@@ -494,6 +491,7 @@ prim.validate <- function(peel.result, X, y) {
   result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
 
   result$metrics <- prim.validate.metrics(result)
+  result$best.box.idx <- prim.box.optimal(result)
   result$superrule <- prim.rule.condense(result)
   result$call <- match.call()
 
@@ -546,25 +544,25 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
       right.support.complement <- N - right.support
 
       if(left.support > 0 & left.support / N <= max.peel & left.support.complement / N >= min.support) {
-        r[["left"]] <- list (
+        r <- c(r, list( list (
           value = quantile.left,
           operator = ">=",
           type = "numeric",
           quality = quality.function(y[!idx.left]),
           idx = which(idx.left),
           colname = cnames[i]
-        )
+        )))
       }
 
       if(right.support > 0 & right.support / N <= max.peel  & right.support.complement / N >= min.support) {
-        r[["right"]] <- list (
+        r <- c(r, list( list (
           value = quantile.right,
           operator = "<=",
           type = "numeric",
           quality = quality.function(y[!idx.right]),
           idx = which(idx.right),
           colname = cnames[i]
-        )
+        )))
       }
 
     } else if (is.logical(col)  ) {
@@ -579,24 +577,24 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
         support.false <- sum(!col)
 
         if(support.true / N <= max.peel & support.false / N >= min.support) {
-          r[["true"]] <- list (
+          r <- c(r, list( list (
             value = FALSE,
             operator = "==",
             type = "logical",
             quality = quality.function(y[!idx.true]),
             idx = which(idx.true),
             colname = cnames[i]
-          )
+          )))
         }
         if(support.false / N <= max.peel & support.true / N >= min.support) {
-          r[["false"]] <- list (
+          r <- c(r, list( list (
             value = TRUE,
             operator = "==",
             type = "logical",
             quality = quality.function(y[!idx.false]),
             idx = which(idx.false),
             colname = cnames[i]
-          )
+          )))
         }
       }
 
@@ -620,14 +618,14 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
           support.lvl.complement <- N - support.lvl
 
           if(support.lvl / N <= max.peel & support.lvl.complement / N >= min.support) {
-            r[[lvl]] <- list (
+            r <- c(r, list( list (
               value = lvl,
               operator = "!=",
               type = "factor",
               quality = quality.function(y[!idx]),
               idx = which(idx),
               colname = cnames[i]
-            )
+            )))
           }
 
         }
@@ -640,7 +638,7 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
 
 
     if(length(r) > 0) {
-      candidates[[cnames[i]]] <- r
+      candidates <- c(candidates, r)
     }
 
     i <- i + 1
@@ -650,37 +648,6 @@ prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, 
   return(candidates)
 }
 
-#' @title Find optimal box candidate
-#' @description This function goes through the box candidate qualities and finds the optimal candidate
-#' @param candidates List of candidate generated by prim.candidates.find()
-#' @return A list with the optimal candidate information
-#' @author Jurian Baas
-prim.candidates.best <- function(candidates) {
-
-  qualities <- sapply(candidates, function(col) {
-    sapply(col, function(x) x$quality)
-  })
-
-  candidate.best <- NULL
-  quality.max <- NA
-
-  # Find the best candidate by linear search
-  for(i in 1:length(qualities)) {
-
-    col <- qualities[[i]]
-
-    for(j in 1:length(col)) {
-
-      if(is.na(quality.max) | col[j] > quality.max) {
-
-        quality.max <- col[j]
-        candidate.best <- candidates[[i]][[j]]
-
-      }
-    }
-  }
-  return(candidate.best)
-}
 
 #' @title Find the optimal box depending on the strategy
 #' @description Finds the box with the highest quality or the box closest to the maximum quality minus 2 times the standard error
@@ -737,21 +704,17 @@ prim.rule.match <- function(prim.object, X) {
 #' @importFrom stats aggregate
 prim.rule.condense <- function(prim.object) {
 
-  supported.classes <- c("prim.validate")
-
-  if(!class(prim.object) %in% supported.classes) {
-    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
-  }
+  if(class(prim.object) != "prim.validate") stop("Supplied argument is not of class prim.validate")
 
   # Search for the rules leading up to the best box
-  rule.idx <- 1:which.max(prim.object$box.qualities)
+  rule.idx <- 1:prim.object$best.box.idx
 
   # Combine the lists into a single data frame
   rules <- data.frame (
     name = factor(prim.object$rule.names[rule.idx]),
     operator = factor(prim.object$rule.operators[rule.idx]),
     value = as.character(prim.object$rule.values[rule.idx]),
-    quality = prim.object$box.qualities[rule.idx],
+    #quality = prim.object$box.qualities[rule.idx],
     type = prim.object$rule.types[rule.idx]
   )
 
@@ -761,7 +724,7 @@ prim.rule.condense <- function(prim.object) {
 
     numerical.rules <- rules[numerical.rules.idx,1:3]
 
-    numerical.rules <- aggregate(
+    numerical.rules <- stats::aggregate (
       list(value = numerical.rules$value),
       list(name = numerical.rules$name, operator = numerical.rules$operator),
       function(x) rev(x)[1])
