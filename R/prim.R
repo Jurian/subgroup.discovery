@@ -16,6 +16,7 @@
 #' @param max.boxes Maximum number of boxes, NA or leave out for no limit
 #' @param quality.function Function to use for determining set quality, defaults to mean
 #' @param plot Plot intermediate results, defaults to false
+#' @param minimize Should the quality be minimized? Same as setting the quality function to function(x){-quality.function(x)}. Defaults to FALSE
 #' @param optimal.box During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum
 #' @return An S3 object of class prim.cover
 #' @author Jurian Baas
@@ -48,6 +49,7 @@ prim.cover <- function (
   max.boxes = NA,
   quality.function = base::mean,
   plot = FALSE,
+  minimize = FALSE,
   optimal.box = c("best", "2se")) {
 
   using.formula <- missing(X) & missing(y)
@@ -86,6 +88,7 @@ prim.cover <- function (
   if(!is.na(max.boxes) & max.boxes <= 0) stop("Maximum boxes must be a positive integer")
   if(length(optimal.box) > 1) optimal.box <- optimal.box[1]
   if(!optimal.box %in% c("best", "2se")) stop("Invalid optimal box paramter")
+  if(minimize) quality.function <- function(x){-quality.function(x)}
 
   result <- list()
   class(result) <- "prim.cover"
@@ -191,6 +194,7 @@ prim.cover <- function (
 #' @param quality.function Function to use for determining subset quality, defaults to mean
 #' @param plot Plot intermediate results, defaults to false. Note that intermediate plotting is unavailable when running in parallel
 #' @param parallel Compute each run in parallel, defaults to TRUE. This will use all but one core. Note that intermediate plotting is unavailable when running in parallel
+#' @param minimize Should the quality be minimized? Same as setting the quality function to function(x){-quality.function(x)}. Defaults to FALSE
 #' @param optimal.box During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum
 #' @return An S3 object of type prim.diversify
 #' @author Jurian Baas
@@ -224,6 +228,7 @@ prim.diversify <- function (
   quality.function = base::mean,
   plot = FALSE,
   parallel = TRUE,
+  minimize = FALSE,
   optimal.box = c("best", "2se")) {
 
   using.formula <- missing(X) & missing(y)
@@ -263,7 +268,7 @@ prim.diversify <- function (
   if(train.fraction >= 1) stop("Training fraction must be a fraction smaller than 1")
   if(length(optimal.box) > 1) optimal.box <- optimal.box[1]
   if(!optimal.box %in% c("best", "2se")) stop("Invalid optimal box paramter")
-
+  if(minimize) quality.function <- function(x){-quality.function(x)}
   if(plot & parallel) message("Note: Plotting intermediate results is unavailable while running in parallel")
 
   result <- list()

@@ -7,7 +7,7 @@
 prim.diversify(formula, data, X, y, n, peeling.quantile = 0.03,
   min.support = 0.05, max.peel = 0.1, train.fraction = 0.66,
   quality.function = base::mean, plot = FALSE, parallel = TRUE,
-  optimal.box = c("best", "2se"))
+  minimize = FALSE, optimal.box = c("best", "2se"))
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -33,6 +33,8 @@ prim.diversify(formula, data, X, y, n, peeling.quantile = 0.03,
 \item{plot}{Plot intermediate results, defaults to false. Note that intermediate plotting is unavailable when running in parallel}
 
 \item{parallel}{Compute each run in parallel, defaults to TRUE. This will use all but one core. Note that intermediate plotting is unavailable when running in parallel}
+
+\item{minimize}{Should the quality be minimized? Same as setting the quality function to function(x){-quality.function(x)}. Defaults to FALSE}
 
 \item{optimal.box}{During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum}
 }
