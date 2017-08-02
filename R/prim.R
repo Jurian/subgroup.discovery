@@ -202,7 +202,7 @@ prim.cover <- function (
 #'   p.div <- prim.diversify(
 #'       SalePrice ~ . - PID - Order,
 #'       data = ames,
-#'       n = 5,
+#'       n = 3,
 #'       plot = TRUE,
 #'       parallel = FALSE,
 #'       optimal.box = "best"
