@@ -6,8 +6,8 @@
 \usage{
 prim.cover(formula, data, X, y, peeling.quantile = 0.03, min.support = 0.05,
   max.peel = 0.1, train.fraction = 0.66, max.boxes = NA,
-  quality.function = base::mean, plot = FALSE, optimal.box = c("best",
-  "2se"))
+  quality.function = base::mean, plot = FALSE, minimize = FALSE,
+  optimal.box = c("best", "2se"))
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -31,6 +31,8 @@ prim.cover(formula, data, X, y, peeling.quantile = 0.03, min.support = 0.05,
 \item{quality.function}{Function to use for determining set quality, defaults to mean}
 
 \item{plot}{Plot intermediate results, defaults to false}
+
+\item{minimize}{Should the quality be minimized? Same as setting the quality function to function(x){-quality.function(x)}. Defaults to FALSE}
 
 \item{optimal.box}{During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum}
 }
