@@ -801,7 +801,7 @@ prim.diversify.compare <- function(X, p.div) {
   if(class(p.div) != "prim.diversify")
     stop("Argument is not of class prim.diversify")
 
-  frontier <- sort(p.div$frontier)
+  frontier <- rev(p.div$frontier)
   nr.of.attempts <- length(frontier)
   idx <- combn(1:nr.of.attempts, 2)
   scores <- apply(idx, 2, function(i) {
