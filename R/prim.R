@@ -932,7 +932,7 @@ plot.prim.peel <- function(x, ...) {
   print.names <- character(length = best.box.idx)
 
   for(i in 1:(best.box.idx)) {
-    if(x$rule.names[i] == x$rule.names[i + 1]) {
+    if(i < length(x$rule.names) & x$rule.names[i] == x$rule.names[i + 1]) {
       print.names[i] <- ""
     } else {
       print.names[i] <- paste(x$rule.names[i], x$rule.operators[i], x$rule.values[i])
@@ -990,7 +990,7 @@ plot.prim.validate <- function(x, ...) {
 
   if(best.box.idx > 1)
     for(i in 1:(best.box.idx-1)) {
-      if(x$rule.names[i] == x$rule.names[i + 1]) {
+      if(i < length(x$rule.names) & x$rule.names[i] == x$rule.names[i + 1]) {
         print.names[i] <- ""
       } else {
         print.names[i] <- paste(x$rule.names[i], x$rule.operators[i], x$rule.values[i])
