@@ -4,7 +4,8 @@
 \alias{prim.rule.operations}
 \title{Intersection of multiple rules}
 \usage{
-prim.rule.operations(X, prim.objects, operation = c("union", "intersect"))
+prim.rule.operations(X, prim.objects, operation = c("union",
+  "intersect"))
 }
 \arguments{
 \item{X}{Data frame to apply rules to}
