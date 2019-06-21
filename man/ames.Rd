@@ -89,9 +89,6 @@
   \item{Sale.Condition}{(Nominal): Condition of sale}
   \item{SalePrice}{(Continuous): Sale price}
 }}
-\source{
-\url{https://ww2.amstat.org/publications/jse/v19n3/decock/datadocumentation.txt}
-}
 \usage{
 ames
 }

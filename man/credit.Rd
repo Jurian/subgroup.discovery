@@ -13,9 +13,6 @@
   \item{gender}{factor with levels male, female}
   \item{class}{class variable (0 or 1)}
 }}
-\source{
-\url{http://www.cs.uu.nl/docs/vakken/adm/bump.pdf}
-}
 \usage{
 credit
 }
