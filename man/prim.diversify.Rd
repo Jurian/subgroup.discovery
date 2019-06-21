@@ -36,7 +36,7 @@ prim.diversify(formula, data, X, y, n, peeling.quantile = 0.03,
 
 \item{minimize}{Should the quality be minimized? Same as setting the quality function to function(x){-quality.function(x)}. Defaults to FALSE}
 
-\item{optimal.box}{During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum}
+\item{optimal.box}{During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum. Defaults to best.}
 }
 \value{
 An S3 object of type prim.diversify
