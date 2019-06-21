@@ -13,7 +13,6 @@
 #'   \item{gender}{factor with levels male, female}
 #'   \item{class}{class variable (0 or 1)}
 #' }
-#' @source \url{http://www.cs.uu.nl/docs/vakken/adm/bump.pdf}
 "credit"
 
 #' Pima Indians Diabetes Database.
@@ -165,5 +164,4 @@
 #'   \item{Sale.Condition}{(Nominal): Condition of sale}
 #'   \item{SalePrice}{(Continuous): Sale price}
 #' }
-#' @source \url{https://ww2.amstat.org/publications/jse/v19n3/decock/datadocumentation.txt}
 "ames"
