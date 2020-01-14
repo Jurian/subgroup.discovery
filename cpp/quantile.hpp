@@ -1,6 +1,8 @@
 #ifndef _QUANTILES_HPP
 #define _QUANTILES_HPP
 
+// [[Rcpp::depends(RcppArmadillo)]]
+
 #include <RcppArmadillo.h>
 
 namespace quantile {

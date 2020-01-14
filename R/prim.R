@@ -378,6 +378,8 @@ prim.peel <- function(X, y, N, peeling.quantile, min.support, max.peel, quality.
   result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
   result$quality.function <- quality.function
   result$N <- N
+  result$min.support <- min.support
+  result$max.peel <- max.peel
   peel.N <- nrow(X)
 
   repeat {
@@ -458,6 +460,8 @@ prim.validate <- function(peel.result, X, y, optimal.box) {
   result$N <- peel.result$N
   result$global.quality <- peel.result$global.quality
   result$optimal.box <- optimal.box
+  result$min.support <- peel.result$min.support
+  result$max.peel <- peel.result$max.peel
   validate.N <- nrow(X)
 
   i <- 1
@@ -916,6 +920,7 @@ plot.prim.peel <- function(x, ...) {
     xlab = "Support", ylab = "Box quality",
     main = "PRIM peel result",
     ...)
+  graphics::abline(v = x$min.support, col = "red", lwd = 2)
   graphics::lines (
     c(1, x$supports),
     c(x$global.quality, x$box.qualities)
@@ -972,7 +977,7 @@ plot.prim.validate <- function(x, ...) {
 
   if(x$optimal.box == "2se")
     graphics::abline(h = max(x$box.qualities) - 2 * x$metrics$se, lty = 2)
-
+  graphics::abline(v = x$min.support, col = "red", lwd = 2)
   graphics::lines (
     c(1, x$supports),
     c(x$global.quality, x$box.qualities)
@@ -1033,6 +1038,7 @@ plot.prim.cover <- function(x, ...) {
     xlab = "Relative support", ylab = "Relative box quality",
     main = "PRIM cover result",
     ...)
+  graphics::abline(v = x$min.support, col = "red", lwd = 2)
   graphics::lines (
     x = dat$supports,
     y = dat$box.qualities,

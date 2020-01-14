@@ -1,10 +1,11 @@
+// [[Rcpp::depends(RcppArmadillo)]]
 
 #include <string>
 #include <vector>
 #include <map>
 #include <RcppArmadillo.h>
 #include "preprocess.hpp"
-#include "colworkers.hpp"
+#include "mapreduce.hpp"
 
 std::vector<arma::uword> sort_index(const Rcpp::NumericVector& v) {
   std::vector<arma::uword> index(v.size(), 0);

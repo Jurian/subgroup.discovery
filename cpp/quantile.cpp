@@ -1,3 +1,5 @@
+// [[Rcpp::depends(RcppArmadillo)]]
+
 #include "quantile.hpp"
 #include <RcppArmadillo.h>
 

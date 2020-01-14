@@ -6,21 +6,23 @@
 #include <RcppArmadillo.h>
 #include "prim.hpp"
 #include "preprocess.hpp"
+#include "mapreduce.hpp"
 
 using namespace std;
 using namespace Rcpp;
 using namespace arma;
+using namespace RcppParallel;
 
 arma::uvec peel(const PrimContainer& pc) {
 
   std::string* colNames = pc.colNames;
-  ColumnType* colTypes = pc.colTypes;
-  std::map<arma::uword, arma::uvec> orderMap = pc.orderMap;
-  std::map<arma::uword, std::map<arma::uword, Category>> catMap = pc.catMap;
+  //ColumnType* colTypes = pc.colTypes;
+  //std::map<arma::uword, arma::uvec> orderMap = pc.orderMap;
+  //std::map<arma::uword, std::map<arma::uword, Category>> catMap = pc.catMap;
   arma::mat M = pc.M;
-  arma::vec y = pc.y;
-  double alpha = pc.alpha;
-  double minSup = pc.minSup;
+  //arma::vec y = pc.y;
+  //double alpha = pc.alpha;
+  //double minSup = pc.minSup;
   bool verbose = pc.verbose;
 
   bool* mask = new bool[M.n_rows]{};
@@ -31,46 +33,15 @@ arma::uvec peel(const PrimContainer& pc) {
   bool subBoxFound;
 
   do {
-    SubBox bestSubBox, newSubBox;
-    subBoxFound = false;
-    for(uword i = 0; i < M.n_cols; i++) {
 
-      try {
+    ColWorker cw(pc, masked, mask);
 
-        switch(colTypes[i]) {
-        case NUMERIC: {
+    parallelReduce(0, M.n_cols, cw);
 
-          NumColWorker nc = {
-            orderMap.find(i)->second, M.col(i), y, i, alpha, minSup, N, masked, mask
-          };
-
-          newSubBox = nc.findCandidate();
-          break;
-        }
-        case FACTOR: {
-
-          CatColWorker cc = {
-            catMap.find(i)->second, M.col(i), y, i, alpha, minSup, N, masked, mask
-          };
-
-          newSubBox = cc.findCandidate();
-          break;
-        }
-        default: stop("Invalid type for column %s", colNames[i]);
-        }
-
-        if(!subBoxFound || newSubBox.compare(bestSubBox) == 1) {
-          bestSubBox = newSubBox;
-          subBoxFound = true;
-        }
-
-      } catch(int e) {
-        // No subBox was found for this column
-      }
-    }
+    subBoxFound = cw.subBoxFound;
 
     if(subBoxFound) {
-
+      SubBox bestSubBox = cw.bestSubBox;
       boxSize = bestSubBox.keep.size() / N;
 
       // Add the new subbox to the mask

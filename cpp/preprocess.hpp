@@ -1,12 +1,19 @@
 #ifndef _PREPROCESS_HPP
 #define _PREPROCESS_HPP
 
+// [[Rcpp::depends(RcppArmadillo)]]
+
 #include <vector>
 #include <map>
 #include <RcppArmadillo.h>
-#include "colworkers.hpp"
 
 enum ColumnType { NUMERIC, FACTOR };
+
+struct Category {
+  arma::uword factor;
+  std::string level;
+  bool* index;
+};
 
 struct PrimContainer {
   std::string* colNames;

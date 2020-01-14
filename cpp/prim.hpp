@@ -1,6 +1,8 @@
 #ifndef _PRIM_HPP
 #define _PRIM_HPP
 
+// [[Rcpp::depends(RcppArmadillo)]]
+
 #include <string>
 #include <vector>
 #include <map>
