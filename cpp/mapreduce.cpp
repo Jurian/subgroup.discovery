@@ -1,11 +1,8 @@
 // [[Rcpp::depends(RcppParallel)]]
-// [[Rcpp::depends(RcppArmadillo)]]
 
-#include <string>
 #include <vector>
 #include <map>
-#include <sstream>
-#include <RcppArmadillo.h>
+#include <Rcpp.h>
 #include <RcppParallel.h>
 #include "quantile.hpp"
 #include "mapreduce.hpp"
@@ -13,53 +10,53 @@
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
-using namespace arma;
 
-string double2string(const double& d) {
-  ostringstream strs;
-  strs << d;
-  return strs.str();
-}
+using pCol = RMatrix<double>::Column;
+using iVec = RVector<int>;
 
-double mean(const vector<uword>& idx, const vec& y) {
-  double sum = 0;
-  for(vector<uword>::const_iterator it = idx.begin(); it != idx.end(); ++it) {
-    sum += y[*it];
-  }
-  return sum/idx.size();
-}
-
-int SubBox::compare(const SubBox& cmp) const {
+bool SubBox::isBetterThan(const SubBox& cmp) const {
 
   bool q = quality > cmp.quality;
   bool e = quality == cmp.quality;
-  bool s = keep.size() > cmp.keep.size();
+  bool s = remove.size() < cmp.remove.size();
 
-  if(q || (e && s)) return 1;
-  else return -1;
+  return q || (e && s);
 }
 
-SubBox ColWorker::findNumCandidate(const uword& colId) {
+SubBox ColWorker::findNumCandidate(const int& colId) {
 
-  const vec col = M.col(colId);
+  const pCol col = M.column(colId);
+  const int N = M.nrow();
 
-  const double leftValue = quantile7(col, orderMap.find(colId)->second, p, N, masked, mask);
-  const double rightValue = quantile7(col, orderMap.find(colId)->second, 1-p, N, masked, mask);
+  const double leftQuantile = quantile7(col, iVec(colOrders.find(colId)->second), alpha, N, masked, mask);
+  const double rightQuantile = quantile7(col, iVec(colOrders.find(colId)->second), 1-alpha, N, masked, mask);
 
-  vector<uword> leftRemove, leftKeep, rightRemove, rightKeep;
+  vector<int> leftRemove, rightRemove;
+  double leftMean = 0, rightMean = 0;
+  int leftK = 1, rightK = 1;
 
-  for(uword i = 0; i < N; i++) {
+  for(int i = 0; i < N; i++) {
     if(mask[i]) continue;
-    if(col[i] < leftValue) leftRemove.push_back(i);
-    else leftKeep.push_back(i);
-    if(col[i] > rightValue) rightRemove.push_back(i);
-    else rightKeep.push_back(i);
+
+    if(col[i] < leftQuantile) {
+      leftRemove.push_back(i);
+    } else {
+      // Cumulative moving avarage of rows we keep
+      leftMean += (y[i] - leftMean) / leftK++;
+    }
+
+    if(col[i] > rightQuantile) {
+      rightRemove.push_back(i);
+    } else {
+      // Cumulative moving avarage of rows we keep
+      rightMean += (y[i] - rightMean) / rightK++;
+    }
   }
 
-  const uword leftRemoveCount = leftRemove.size();
-  const uword leftKeepCount = leftKeep.size();
-  const uword rightRemoveCount = rightRemove.size();
-  const uword rightKeepCount = rightKeep.size();
+  const int leftRemoveCount = leftRemove.size();
+  const int leftKeepCount = N - masked - leftRemove.size();
+  const int rightRemoveCount = rightRemove.size();
+  const int rightKeepCount = N - masked - rightRemove.size();
 
   SubBox left, right;
   bool leftFound = false, rightFound = false;
@@ -68,11 +65,10 @@ SubBox ColWorker::findNumCandidate(const uword& colId) {
     leftFound = true;
     left = {
       leftRemove,
-      leftKeep,
       colId,
-      double2string(leftValue),
-      mean(leftKeep, y),
-      NUM_LEFT
+      leftQuantile,
+      leftMean,
+      BOX_NUM_LEFT
     };
   }
 
@@ -80,92 +76,93 @@ SubBox ColWorker::findNumCandidate(const uword& colId) {
     rightFound = true;
     right = {
       rightRemove,
-      rightKeep,
       colId,
-      double2string(rightValue),
-      mean(rightKeep, y),
-      NUM_RIGHT
+      rightQuantile,
+      rightMean,
+      BOX_NUM_RIGHT
     };
   }
 
   if(!leftFound && !rightFound) throw 0;
-  return left.compare(right) == 1 ? left : right;
+  if(!leftFound && rightFound) return right;
+  if(leftFound && !rightFound) return left;
+  return left.isBetterThan(right) ? left : right;
 };
 
-SubBox ColWorker::findCatCandidate(const uword& colId) {
+SubBox ColWorker::findCatCandidate(const int& colId) {
 
-  const vec col = M.col(colId);
-  const map<uword, Category> categories = catMap.find(colId)->second;
+  const pCol col = M.column(colId);
+  const int nCats = colCats.find(colId)->second;
+  const int N = M.nrow();
 
   SubBox bestSubBox, newSubBox;
-  bool subBoxFound = false;
+  bool boxFound = false;
 
   // Calculate the quality of each category
-  map<uword, Category>::const_iterator it;
-  for(it = categories.begin(); it != categories.end(); ++it) {
+  for(int c = 0; c < nCats; c++) {
 
-    Category c = it->second;
     double quality = 0;
 
-    vector<uword> keep, remove;
+    vector<int> remove;
 
-    uword k = 0;
-    for(uword i = 0; i < col.n_elem; i++) {
+    int k = 1;
+    for(size_t i = 0; i < col.size(); i++) {
       if(mask[i]) continue; // Skip masked rows
-      if(!c.index[i]) { // Take cumulative moving avarage of all other categories
-        quality = quality + ((y[i] - quality) / (k + 1));
-        keep.push_back(i);
-        k++;
+      if((int) col[i] != c) {
+        // Take cumulative moving avarage of all other categories
+        quality += (y[i] - quality) / k++;
       }else {
         remove.push_back(i);
       }
     }
 
-    if(keep.size() == 0) continue;
+    const int keepSize = N - masked - remove.size();
+
+    if(keepSize == 0) continue;
     if(remove.size() == 0) continue;
 
-    const double removeFraction = remove.size() / (double) (remove.size() + keep.size());
-    if(removeFraction < p && keep.size() / N >= minSup) {
+    const double removeFraction = remove.size() / (double) (remove.size() + keepSize);
+    if(removeFraction < alpha && keepSize / N >= minSup) {
 
       newSubBox = {
         remove,
-        keep,
         colId,
-        c.level,
+        (double) c,
         quality,
-        CATEGORY
+        BOX_CATEGORY
       };
 
-      if(!subBoxFound || newSubBox.compare(bestSubBox) == 1) {
+      if(!boxFound || newSubBox.isBetterThan(bestSubBox)) {
         bestSubBox = newSubBox;
-        subBoxFound = true;
+        boxFound = true;
       };
     }
   }
 
-  if(!subBoxFound) throw 0;
+  if(!boxFound) throw 0;
   return bestSubBox;
 };
 
 void ColWorker::operator()(size_t begin, size_t end) {
 
   SubBox newSubBox;
-
+  subBoxFound = false;
   for(size_t i = begin; i < end; i++) {
 
     try {
-
-      if(colTypes[i] == NUMERIC) {
+      //Rcout << i;
+      if(colTypes[i] == COL_NUMERIC) {
         newSubBox = findNumCandidate(i);
       }
-      else if(colTypes[i] == FACTOR) {
+      else if(colTypes[i] == COL_CATEGORICAL) {
         newSubBox = findCatCandidate(i);
       }
       else {
-        stop("Invalid type for column %s", colNames[i]);
+        stop("Invalid type for column %i", i+1);
       }
 
-      if(!subBoxFound || newSubBox.compare(bestSubBox) == 1) {
+      if(!subBoxFound || newSubBox.isBetterThan(bestSubBox)) {
+
         bestSubBox = newSubBox;
         subBoxFound = true;
       }
@@ -178,7 +175,7 @@ void ColWorker::operator()(size_t begin, size_t end) {
 
 void ColWorker::join(const ColWorker& cw) {
 
-  if(cw.subBoxFound && (!subBoxFound || cw.bestSubBox.compare(bestSubBox) == 1)) {
+  if(cw.subBoxFound && (!subBoxFound || cw.bestSubBox.isBetterThan(bestSubBox))) {
     bestSubBox = cw.bestSubBox;
     subBoxFound = true;
   }

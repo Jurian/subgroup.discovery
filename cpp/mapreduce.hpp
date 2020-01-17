@@ -2,55 +2,72 @@
 #define _MAPREDUCE_HPP
 
 // [[Rcpp::depends(RcppParallel)]]
-// [[Rcpp::depends(RcppArmadillo)]]
 
-#include <string>
 #include <vector>
 #include <map>
-#include <RcppArmadillo.h>
+#include <Rcpp.h>
 #include <RcppParallel.h>
-#include "preprocess.hpp"
 
-enum BoxType { NUM_LEFT, NUM_RIGHT, CATEGORY };
+using namespace RcppParallel;
+using namespace Rcpp;
+using namespace std;
+
+using dMat = RMatrix<double>;
+using dVec = RVector<double>;
+using iVec = RVector<int>;
+using iMap = map<int, int>;
+using vMap = map<int, IntegerVector>;
+
+static const int COL_NUMERIC = 0;
+static const int COL_CATEGORICAL = 1;
+
+static const int BOX_NUM_LEFT = 0;
+static const int BOX_NUM_RIGHT = 1;
+static const int BOX_CATEGORY = 2;
 
 struct SubBox {
-  std::vector<arma::uword> remove;
-  std::vector<arma::uword> keep;
-  arma::uword col;
-  std::string value;
+  vector<int> remove;
+  int col;
+  double value;
   double quality;
-  BoxType side;
+  int type;
 
-  int compare(const SubBox& cmp) const;
+  bool isBetterThan(const SubBox& cmp) const;
 };
 
 struct ColWorker : public RcppParallel::Worker {
 
-  const arma::mat M;
-  const arma::vec y;
-  const double p, minSup, N;
-  const std::map<arma::uword, arma::uvec> orderMap;
-  const std::map<arma::uword, std::map<arma::uword, Category>> catMap;
-  const std::string* colNames;
-  const ColumnType* colTypes;
-
-  const arma::uword masked;
+  const dMat& M;
+  const dVec& y;
+  const iVec& colTypes;
+  const iMap& colCats;
+  const vMap& colOrders;
+  const double& alpha;
+  const double& minSup;
+  const int masked;
   const bool* mask;
 
   bool subBoxFound;
   SubBox bestSubBox;
 
   // constructors
-  ColWorker (const PrimContainer& pc, const arma::uword masked, const bool* mask)
-    : M(pc.M),
-      y(pc.y),
-      p(pc.alpha),
-      minSup(pc.minSup),
-      N(M.n_rows),
-      orderMap(pc.orderMap),
-      catMap(pc.catMap),
-      colNames(pc.colNames),
-      colTypes(pc.colTypes),
+  ColWorker (
+      const dMat& M,
+      const dVec& y,
+      const iVec& colTypes,
+      const iMap& colCats,
+      const vMap& colOrders,
+      const double& alpha,
+      const double& minSup,
+      const int masked,
+      const bool* mask)
+    : M(M),
+      y(y),
+      colTypes(colTypes),
+      colCats(colCats),
+      colOrders(colOrders),
+      alpha(alpha),
+      minSup(minSup),
       masked(masked),
       mask(mask),
       subBoxFound(false) {};
@@ -58,24 +75,19 @@ struct ColWorker : public RcppParallel::Worker {
   ColWorker(const ColWorker& cw, RcppParallel::Split)
     : M(cw.M),
       y(cw.y),
-      p(cw.p), minSup(cw.minSup), N(cw.N),
-      orderMap(cw.orderMap),
-      catMap(cw.catMap),
-      colNames(cw.colNames),
       colTypes(cw.colTypes),
+      colCats(cw.colCats),
+      colOrders(cw.colOrders),
+      alpha(cw.alpha),
+      minSup(cw.minSup),
       masked(cw.masked),
       mask(cw.mask),
       subBoxFound(false) {};
 
-
   void operator()(size_t begin, size_t end);
   void join(const ColWorker& cw);
-  SubBox findNumCandidate(const arma::uword& colId);
-  SubBox findCatCandidate(const arma::uword& colId);
+  SubBox findNumCandidate(const int& colId);
+  SubBox findCatCandidate(const int& colId);
 };
-
-std::string double2string(const double& d);
-double mean(const std::vector<arma::uword>& idx, const arma::vec& y);
-
 
 #endif

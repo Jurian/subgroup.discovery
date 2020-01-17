@@ -1,52 +1,61 @@
-// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::depends(RcppParallel)]]
 
+
+#include <Rcpp.h>
+#include <RcppParallel.h>
 #include "quantile.hpp"
-#include <RcppArmadillo.h>
+
+using namespace RcppParallel;
+using namespace Rcpp;
+using namespace std;
+
+using dCol = RMatrix<double>::Column;
+using iVec = RVector<int>;
 
 namespace quantile {
   double q(const double& gamma, const double& i, const double& j) {
     return (1 - gamma) * i + gamma * j;
   }
 
-  double g(const arma::uword& n, const double& p, const double& m, const arma::uword& j) {
+  double g(const int& n, const double& p, const double& m, const int& j) {
     return n * p + m - j;
   }
 
-  arma::uword j(const arma::uword& n, const double& p, const double& m) {
+  int j(const int& n, const double& p, const double& m) {
     return floor(n * p + m);
   }
 }
 
-arma::uword findMaskedIndex(const arma::uword& j, const arma::uword& N, const bool* mask) {
-  arma::uword k = 0;
-  for(arma::uword i = 0; i < N; i++) {
+int findMaskedIndex(const int& j, const int& N, const bool* mask) {
+  int k = 0;
+  for(int i = 0; i < N; i++) {
     if(!mask[i]) k++;
     if(k == j) return i;
   }
   throw 0;
 }
 
-double quantile7 (const arma::vec& col, const arma::uvec& order, const double& p,
-                  const arma::uword& N,const arma::uword& masked, const bool* mask) {
+double quantile7 (const dCol& col, const iVec& order, const double& p,
+                  const int& N,const int& masked, const bool* mask) {
 
-  const arma::uword n = N - masked;
+  const int n = N - masked;
 
   const double index = 1 + (n - 1) * p;
-  const arma::uword lo = floor(index);
-  const arma::uword hi = ceil(index);
+  const int lo = floor(index);
+  const int hi = ceil(index);
   const double gamma = index - lo;
 
   return quantile::q(gamma, col[order[findMaskedIndex(lo, N, mask)]], col[order[findMaskedIndex(hi, N, mask)]]);
 }
 
 
-double quantile2 (const arma::vec& col, const arma::uvec& order, const double& p,
-                  const arma::uword& N, const arma::uword& masked, const bool* mask) {
+double quantile2 (const dCol& col, const iVec& order, const double& p,
+                  const int& N, const int& masked, const bool* mask) {
 
   // m is a constant determined by quantile type
   const double m = 0;
-  const arma::uword n = N - masked;
-  const arma::uword j = quantile::j(n,p,m);
+  const int n = N - masked;
+  const int j = quantile::j(n,p,m);
   const double gamma = quantile::g(n,p,m,j) == 0 ? 0.5 : 1;
 
   return quantile::q(gamma, col[order[findMaskedIndex(j, N, mask)]], col[order[findMaskedIndex(j + 1, N, mask)]]);

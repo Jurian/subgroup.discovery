@@ -3,16 +3,44 @@
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
-#include <string>
 #include <vector>
 #include <map>
-#include <RcppArmadillo.h>
-#include "preprocess.hpp"
+#include <Rcpp.h>
+#include <RcppParallel.h>
+#include "mapreduce.hpp"
 
-arma::uvec peel(const PrimContainer& pc);
+using namespace RcppParallel;
+using namespace Rcpp;
+using namespace std;
+
+using dMat = RMatrix<double>;
+using dVec = RVector<double>;
+using iVec = RVector<int>;
+using iMap = map<int, int>;
+using vMap = map<int, IntegerVector>;
+using dCol = NumericMatrix::ConstColumn;
+
+IntegerVector sortIndex(const dCol& col);
+int countCategories(const dCol& col);
+
+vector<SubBox> findSubBoxes(
+    const dMat& M,
+    const dVec& y,
+    const iVec& colTypes,
+    const iMap& colCats,
+    const vMap& colOrders,
+    const double& alpha,
+    const double& minSup,
+    const bool& verbose);
 
 // [[Rcpp::export]]
-arma::uvec prim(const Rcpp::DataFrame& df, const arma::vec& y, const double& quantile, const double& minSup, const bool& verbose = false);
+void peel(
+    const NumericMatrix& M,
+    const NumericVector& y,
+    const IntegerVector& colTypes,
+    const double& alpha,
+    const double& minSup,
+    const bool& verbose = false);
 
 
 #endif

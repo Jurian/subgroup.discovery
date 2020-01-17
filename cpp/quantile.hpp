@@ -1,22 +1,30 @@
 #ifndef _QUANTILES_HPP
 #define _QUANTILES_HPP
 
-// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::depends(RcppParallel)]]
 
-#include <RcppArmadillo.h>
+#include <Rcpp.h>
+#include <RcppParallel.h>
+
+using namespace RcppParallel;
+using namespace Rcpp;
+using namespace std;
+
+using dCol = RMatrix<double>::Column;
+using iVec = RVector<int>;
 
 namespace quantile {
   double q(const double& gamma, const double& i, const double& j);
 
-  double g(const arma::uword& n, const double& p, const double& m, const arma::uword& j);
+  double g(const int& n, const double& p, const double& m, const int& j);
 
-  arma::uword j(const arma::uword& n, const double& p, const double& m);
+  int j(const int& n, const double& p, const double& m);
 }
 
-arma::uword findMaskedIndex(const arma::uword& j, const arma::uword& N, const bool* mask);
+int findMaskedIndex(const int& j, const int& N, const bool* mask);
 
-double quantile7(const arma::vec& col, const arma::uvec& order, const double& p, const arma::uword& N, const arma::uword& masked, const bool* mask);
+double quantile7(const dCol& col, const iVec& order, const double& p, const int& N, const int& masked, const bool* mask);
 
-double quantile2(const arma::vec& col, const arma::uvec& order, const double& p, const arma::uword& N, const arma::uword& masked, const bool* mask);
+double quantile2(const dCol& col, const iVec& order, const double& p, const int& N, const int& masked, const bool* mask);
 
 #endif
