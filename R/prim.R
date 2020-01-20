@@ -2,55 +2,38 @@
 ################################## PRIM INTERFACE FUNCTIONS #################################
 #-------------------------------------------------------------------------------------------#
 
+#' @title Prepare data for PRIM
+#' @description Only numerical and factor data is allowed, this function helps prepare the data by converting logical and character columns to factor
+#' @param X The data frame to prepare
+#' @return The same data frame, with only numerical and factor data
+#' @author Jurian Baas
+#' @export
+prim.data.prepare <- function(X) {
+  violating.cols <- !(sapply(X, is.numeric) | sapply(X, is.factor))
+  X[violating.cols] <- lapply(X[violating.cols], as.factor)
+  return(X)
+}
 
-#' @title PRIM covering strategy
-#' @description In bump hunting it is customary to follow a so-called covering strategy. This means that the same box construction (rule induction) algorithm is applied sequentially to subsets of the data.
+#' @title Find the optimal sub-box using the PRIM peeling strategy
+#' @description By iteratively removing a small portion of the data... Note that categorical data has to be in factor form.
 #' @param formula Formula with a response and terms
 #' @param data Data frame to find rules in
 #' @param X Optionally instead of using a formula: Data frame to find rules in
 #' @param y Optionally instead of using a formula: Response vector, usually of type numeric
 #' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
-#' @param max.peel Maximal size of a peel, as a fraction. Defaults to 0.1
-#' @param train.fraction Train-test split fraction used in validation, defaults to 0.66
-#' @param max.boxes Maximum number of boxes, NA or leave out for no limit
-#' @param quality.function Function to use for determining set quality, defaults to mean
-#' @param plot Plot intermediate results, defaults to false
-#' @param minimize Should the quality be minimized? Same as setting the quality function to function(x){-quality.function(x)}. Defaults to FALSE
-#' @param optimal.box During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum. Defaults to best.
-#' @return An S3 object of class prim.cover
+#' @param parallel Peel columns in parallel, faster for many columns (defaults to true)
+#' @return An S3 object of class prim.peel
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response complete.cases terms
-#' @importFrom graphics plot par
-#' @examples
-#'   data(pima)
-#'   p.cov <- prim.cover(
-#'       class ~ .,
-#'       data = pima,
-#'       peeling.quantile = 0.05,
-#'       min.support = 0.1,
-#'       plot = TRUE,
-#'       optimal.box = "2se"
-#'   )
-#'
-#'   \donttest{
-#'   summary(p.cov)
-#'   plot(p.cov)
-#'   }
 #' @export
-prim.cover <- function (
+prim.peel <- function (
   formula,
   data,
   X, y,
   peeling.quantile = 0.03,
   min.support = 0.05,
-  max.peel = 0.1,
-  train.fraction = 0.66,
-  max.boxes = NA,
-  quality.function = base::mean,
-  plot = FALSE,
-  minimize = FALSE,
-  optimal.box = c("best", "2se")) {
+  parallel = T) {
 
   using.formula <- missing(X) & missing(y)
 
@@ -83,266 +66,34 @@ prim.cover <- function (
   if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
   if(min.support <= 0) stop("Minimum support must be positive")
   if(min.support >= 1) stop("Minimum support must be a fraction smaller than 1")
-  if(train.fraction <= 0) stop("Training fraction must be positive")
-  if(train.fraction >= 1) stop("Training fraction must be a fraction smaller than 1")
-  if(!is.na(max.boxes) & max.boxes <= 0) stop("Maximum boxes must be a positive integer")
-  if(length(optimal.box) > 1) optimal.box <- optimal.box[1]
-  if(!optimal.box %in% c("best", "2se")) stop("Invalid optimal box paramter")
-  if(minimize) quality.function <- function(x){-quality.function(x)}
+
+  # Keep track of which columns are numerical and factors
+  col.types <- sapply(X, function(col){
+    if(is.numeric(col)) return(0)
+    if(is.factor(col)) return(1)
+    stop("Data contains invalid data types, only numeric and factors are allowed. Use prim.data.prepare() to make sure the data is properly set up.")
+  })
+
+  # Turn factors into numerical
+  X[sapply(X, is.factor)] <- lapply(X[sapply(X, is.factor)], function(col) {as.numeric(col)-1})
 
   result <- list()
-  class(result) <- "prim.cover"
+  class(result) <- "prim.peel"
 
   result$N <- nrow(X)
   result$peeling.quantile <- peeling.quantile
   result$min.support <- min.support
-  result$train.fraction <- train.fraction
-  result$quality.function <- quality.function
-  result$quality.function.name <- base::deparse(base::substitute(quality.function))
-  result$global.quality <- quality.function(y)
+  result$global.quality <- mean(y)
+  result$col.types <- col.types
 
-  if(!is.na(max.boxes)) result$max.boxes <- max.boxes
-
-  covers <- list()
-
-  y.sub.quality <- result$global.quality
-  min.N <- result$N * min.support
-  box.nr <- 1
-
-  repeat {
-
-    cur.N <- nrow(X)
-
-    # In case:
-    # The user set a max number of boxes and we reached that limit
-    # Current cover has become too small
-    if((!is.na(max.boxes) & box.nr > max.boxes) | (cur.N < min.N)) break
-
-    box.nr <- box.nr + 1
-
-    # Take a sample so we can validate the current cover
-    train <- sample(1:cur.N, cur.N * train.fraction)
-
-    p.peel <- prim.peel(
-      X = X[train, , drop = FALSE],
-      y = y[train],
-      N = result$N,
-      peeling.quantile = peeling.quantile,
-      min.support = min.support,
-      max.peel = max.peel,
-      quality.function = quality.function
-    )
-    p.peel$global.quality <- quality.function(y[train])
-    p.validate <- prim.validate(p.peel, X[-train, , drop = FALSE], y[-train], optimal.box)
-
-    idx <- prim.rule.match(p.validate, X)
-
-    if(sum(idx) == 0) {
-      warning("Validating yielded no box, try increasing max.peel and/or decreasing min.support")
-      break
-    }
-
-    # The number of observations in the current cover
-    p.validate$cover.N <- nrow(X)
-    # The number of observations in the current cover that fall in the box
-    p.validate$cover.box.N <- sum(idx)
-    # The overall quality of the current cover
-    p.validate$cover.global.quality <- quality.function(y)
-    # The quality of the box inside the current cover
-    p.validate$cover.box.quality <- quality.function(y[idx])
-
-    # This box does not meet the minimal quality
-    y.sub.quality <- p.validate$cover.box.quality
-    if(y.sub.quality < result$global.quality )  break
-
-    if(plot) {
-      graphics::par(mfrow = c(1,2))
-      graphics::plot(p.peel)
-      graphics::plot(p.validate)
-      graphics::par(mfrow = c(1,1))
-    }
-
-    # Remove the observations that fall outside of the current box
-    X <- X[!idx, , drop = FALSE]
-    y <- y[!idx]
-
-    covers <- c(covers, list(p.validate))
-
-  }
-
-  result$covers <- covers
-
-  # Add the leftover points
-  p.leftover <- list()
-  class(p.leftover) <- "prim.cover.leftover"
-  p.leftover$cover.N <- nrow(X)
-  p.leftover$cover.global.quality <- quality.function(y)
-  result$leftover <- p.leftover
-
-  if(using.formula) result$formula <- formula
-
-  return(result)
-}
-
-#' @title PRIM diversify strategy
-#' @description Provide a (hopefully) diverse number of box definitions
-#' @details Because the final box depends on the data used, we re-run the PRIM peeling algorithm multiple times, each with a different random train/test split. Each run is independent from the others, so this algorithm is run in parallel by default.
-#' @param formula Formula with a response and terms
-#' @param data Data frame to find rules in
-#' @param X Optionally instead of using a formula: Data frame to find rules in
-#' @param y Optionally instead of using a formula: Response vector, usually of type numeric
-#' @param n Numer of attempts to run the PRIM algorithm
-#' @param peeling.quantile Quantile to peel off for numerical variables
-#' @param min.support Minimal size of a box to be valid
-#' @param max.peel Maximal size of a peel, as a fraction. Defaults to 0.1
-#' @param train.fraction Train-test split fraction used in validation, defaults to 0.66
-#' @param quality.function Function to use for determining subset quality, defaults to mean
-#' @param plot Plot intermediate results, defaults to false. Note that intermediate plotting is unavailable when running in parallel
-#' @param parallel Compute each run in parallel, defaults to TRUE. This will use all but one core. Note that intermediate plotting is unavailable when running in parallel
-#' @param minimize Should the quality be minimized? Same as setting the quality function to function(x){-quality.function(x)}. Defaults to FALSE
-#' @param optimal.box During validation, choose the box with the highest quality or a simpler box, two standard errors from the optimum. Defaults to best.
-#' @return An S3 object of type prim.diversify
-#' @author Jurian Baas
-#' @importFrom stats model.frame model.response complete.cases terms
-#' @importFrom graphics plot par
-#' @importFrom parallel detectCores makeCluster parLapply stopCluster
-#' @examples
-#'   data(ames)
-#'   p.div <- prim.diversify(
-#'       SalePrice ~ . - PID - Order,
-#'       data = ames,
-#'       n = 3,
-#'       plot = TRUE,
-#'       parallel = FALSE,
-#'       optimal.box = "best"
-#'   )
-#'
-#'   \donttest{
-#'   summary(p.div)
-#'   plot(p.div)
-#'   }
-#' @export
-prim.diversify <- function (
-  formula,
-  data,
-  X, y, n,
-  peeling.quantile = 0.03,
-  min.support = 0.05,
-  max.peel = 0.1,
-  train.fraction = 0.66,
-  quality.function = base::mean,
-  plot = FALSE,
-  parallel = TRUE,
-  minimize = FALSE,
-  optimal.box = c("best", "2se")) {
-
-  using.formula <- missing(X) & missing(y)
-
-  # Use the formula interface
-  if(using.formula) {
-    if(!is.data.frame(data)) stop("Data argument is not a data frame, aborting...")
-
-    X <- stats::model.frame(formula(stats::terms(formula, data = data, simplify = TRUE)), data)
-    y <- stats::model.response(X)
-    X <- X[,-1]
-
-    if(is.null(y)) stop("Data has no response variable, aborting...")
-
-  } else {
-
-    if(!is.data.frame(X)) stop("Paremeter X has to be a data frame")
-    if(!is.vector(y)) stop("Parameter y has to be a vector")
-    if(nrow(X) != length(y)) stop("Parameters X and y are not of same size")
-
-    # Remove rows with NA values
-    test.complete <- stats::complete.cases(X)
-    if(!all(test.complete)) {
-      warning("Incomplete cases found in data, removing...")
-      X <- X[test.complete,]
-      y <- y[test.complete]
-    }
-
-  }
-
-  if(n < 2) stop("Must supply n >= 2")
-  if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
-  if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
-  if(min.support <= 0) stop("Minimum support must be positive")
-  if(min.support >= 1) stop("Minimum support must be a fraction smaller than 1")
-  if(train.fraction <= 0) stop("Training fraction must be positive")
-  if(train.fraction >= 1) stop("Training fraction must be a fraction smaller than 1")
-  if(length(optimal.box) > 1) optimal.box <- optimal.box[1]
-  if(!optimal.box %in% c("best", "2se")) stop("Invalid optimal box paramter")
-  if(minimize) quality.function <- function(x){-quality.function(x)}
-  if(plot & parallel) message("Note: Plotting intermediate results is unavailable while running in parallel")
-
-  result <- list()
-  class(result) <- "prim.diversify"
-
-  attempts <- list()
-
-  result$peeling.quantile = peeling.quantile
-  result$min.support = min.support
-  result$train.fraction = train.fraction
-  result$quality.function <- quality.function
-  result$quality.function.name <- base::deparse(base::substitute(quality.function))
-  result$N <- nrow(X)
-  result$global.quality <- quality.function(y)
-
-  # Define a seperate function so we can use a parallel approach if wanted
-  # but also fall back on a default method
-  peel.and.validate <- function(i) {
-    train <- sample(1:nrow(X), nrow(X) * train.fraction)
-
-    p.peel <- prim.peel(
-      X = X[train, , drop = FALSE],
-      y = y[train],
-      N = result$N,
-      peeling.quantile = peeling.quantile,
-      min.support = min.support,
-      max.peel = max.peel,
-      quality.function = quality.function)
-    p.peel$global.quality <- result$global.quality
-
-    p.validate <- prim.validate(p.peel, X[-train, , drop = FALSE], y[-train], optimal.box)
-
-    if(plot) {
-      graphics::par(mfrow = c(1,2))
-      graphics::plot(p.peel)
-      graphics::plot(p.validate)
-      graphics::par(mfrow = c(1,1))
-    }
-
-    idx <- prim.rule.match(p.validate, X)
-
-    p.validate$final.box.N <- sum(idx)
-    p.validate$final.box.quality <- quality.function(y[idx])
-
-    return(p.validate)
-  }
-
-  if(parallel) {
-    # Calculate the number of cores
-    nr_cores <- parallel::detectCores() - 1
-
-    # Initiate cluster
-    cl <- parallel::makeCluster(nr_cores)
-
-    result$attempts <- tryCatch({
-      parallel::parLapply(cl, 1:n, peel.and.validate)
-    }, finally = {
-      # Make sure we ALWAYS stop the cluster neatly
-      parallel::stopCluster(cl)
-    })
-
-  } else {
-    # Fall back on the default method
-    result$attempts <- lapply(1:n, peel.and.validate)
-  }
-
-  result$frontier <- quasi.convex.hull(result)
-  result$scoreMatrix <- prim.diversify.compare(X, result)
-  result$scores <- rowMeans(result$scoreMatrix, na.rm = TRUE)
+  result$peels <- peel(
+    M = as.matrix(X),
+    y = y,
+    colTypes = col.types,
+    alpha = peeling.quantile,
+    minSup = min.support,
+    parallel = parallel
+  )
 
   if(using.formula) result$formula <- formula
 
@@ -350,330 +101,42 @@ prim.diversify <- function (
 }
 
 
-#-------------------------------------------------------------------------------------------#
-################################### PRIM PRIVATE FUNCTIONS ##################################
-#-------------------------------------------------------------------------------------------#
-
-#' @title Bump hunting using the Patient Rule Induction Method
-#' @description Peeling function for bump hunting using the Patient Rule Induction Method (PRIM).
-#' @param X Data frame to find rules in
-#' @param y Response vector, usually of type numeric
-#' @param N Size of entire data set
-#' @param peeling.quantile Quantile to peel off for numerical variables
-#' @param min.support Minimal size of a box to be valid, as a fraction
-#' @param max.peel Maximal size of a peel, as fraction
-#' @param quality.function Which function to use to determine the quality of a box
-#' @return An S3 object of class prim.peel
-#' @author Jurian Baas
-#' @importFrom stats model.frame model.response
-prim.peel <- function(X, y, N, peeling.quantile, min.support, max.peel, quality.function) {
-
-  result <- list()
-  result$box.qualities <- numeric()
-  result$supports <- numeric()
-
-  result$rule.names <- character()
-  result$rule.operators <- character()
-  result$rule.types <- character()
-  result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
-  result$quality.function <- quality.function
-  result$N <- N
-  result$min.support <- min.support
-  result$max.peel <- max.peel
-  peel.N <- nrow(X)
-
-  repeat {
-
-    if(nrow(X) / N <= min.support) break
-
-    # Find box candidates
-    candidates <- prim.candidates.find(X, y, peeling.quantile, min.support, max.peel, quality.function)
-
-    if(length(candidates) == 0) break
-
-    # Find the candidate with the highest quality and break ties by support
-    max.idx <- order (
-      sapply(candidates, function(c) c$quality),
-      sapply(candidates, function(c) c$support),
-      decreasing = TRUE
-    )[1]
-
-    cf  <- candidates[[max.idx]]
-
-    if(cf$type == "factor") {
-      cf$value <- paste0("'", cf$value, "'")
-    }
-
-    X <- X[-cf$idx, , drop = FALSE]
-    y <- y[-cf$idx]
-
-    result$box.qualities <- c(result$box.qualities, quality.function(y))
-    result$supports <- c(result$supports, length(y) / peel.N)
-
-    result$rule.values <- c(result$rule.values, cf$value)
-    result$rule.names <- c(result$rule.names, cf$colname)
-    result$rule.operators <- c(result$rule.operators, cf$operator)
-    result$rule.types <- c(result$rule.types, cf$type)
-  }
-
-  result$rule.names <- factor(result$rule.names, levels = colnames(X))
-  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
-  result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
-
-  class(result) <- "prim.peel"
-
-  #result$superrule <- prim.rule.condense(result)
-  result$call <- match.call()
-
-  return(result)
-}
-
-#' @title Bump hunting using the Patient Rule Induction Method
+#' @title Validate peels
 #' @description Validate the results taken from the PRIM peeling process
 #' @details This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
 #' @param peel.result An S3 object of class prim.peel
 #' @param X A data frame with at least those columns that were used in creating the prim.peel S3 object
 #' @param y Response vector, usually of type numeric
-#' @param optimal.box Choose the box with the highest quality or a simpler box, two standard errors from the optimum
 #' @return An S3 object of type prim.validate
 #' @author Jurian Baas
-prim.validate <- function(peel.result, X, y, optimal.box) {
+#' @export
+prim.validate <- function(peel.result, X, y) {
 
   if(class(peel.result) != "prim.peel") {
     stop("Supplied argument is not of class prim.peel, aborting...")
   }
 
+  # Keep track of which columns are numerical and factors
+  col.types <- sapply(X, function(col){
+    if(is.numeric(col)) return(0)
+    if(is.factor(col)) return(1)
+    stop("Data contains invalid data types, only numeric and factors are allowed. Use prim.data.prepare() to make sure the data is properly set up.")
+  })
+
+  if(!identical(col.types, peel.result$col.types)) stop("Columns in X differ from those in peeling result")
+  if(length(prim.result$peels) == 0) stop("No peeling steps in provided result")
   if(nrow(X) != length(y)) stop(paste("Parameters X and y are not of same size:", nrow(X), length(y)))
 
-  quality.function <- peel.result$quality.function
 
-  result <- list()
-  class(result) <- "prim.validate"
-  result$box.qualities <- numeric()
-  result$supports <- numeric()
-  result$redundant <- integer()
-  result$rule.names <- character()
-  result$rule.operators <- character()
-  result$rule.types <- character()
-  result$rule.values <- list() # A list because we store multiple types of values (i.e. numerical, logical and factors)
-  result$quality.function <- peel.result$quality.function
-  result$N <- peel.result$N
-  result$global.quality <- peel.result$global.quality
-  result$optimal.box <- optimal.box
-  result$min.support <- peel.result$min.support
-  result$max.peel <- peel.result$max.peel
-  validate.N <- nrow(X)
 
-  i <- 1
-
-  repeat {
-
-    # Stop if there are no more boxes
-    if(i > length(peel.result$rule.names)) break
-
-    rule.info <- list(
-      name = as.character(peel.result$rule.names[i]),
-      operator = as.character(peel.result$rule.operators[i]),
-      value = peel.result$rule.values[i],
-      type = as.character(peel.result$rule.types[i])
-    )
-
-    rule <- paste( rule.info$name, rule.info$operator, rule.info$value)
-    idx <- !with(X, eval(parse(text = rule)))
-
-    # Check if this rule has any observations in the test data
-    if(sum(idx) > 0) {
-
-      X <- X[!idx, , drop = FALSE]
-      y <- y[!idx]
-
-      result$box.qualities <- c(result$box.qualities, quality.function(y))
-      result$supports <- c(result$supports, length(y) / validate.N)
-
-      result$rule.values <- c(result$rule.values, rule.info$value)
-      result$rule.names <- c(result$rule.names, rule.info$name)
-      result$rule.operators <- c(result$rule.operators, rule.info$operator)
-      result$rule.types <- c(result$rule.types, rule.info$type)
-
-    } else {
-
-      result$redundant <- c(result$redundant, i)
-
-    }
-
-    # This box could have all the remaining observations, no need to iterate further
-    if(nrow(X) == 0) break
-
-    i <- i + 1
-  }
-
-  result$rule.names <- factor(result$rule.names, levels = colnames(X))
-  result$rule.operators <- factor(result$rule.operators, levels = c(">=", "<=", "==", "!="))
-  result$rule.types <- factor(result$rule.types, levels = c("numeric", "logical", "factor"))
-
-  result$metrics <- prim.validate.metrics(result)
-  result$best.box.idx <- prim.box.optimal(result)
-  result$superrule <- prim.rule.condense(result)
   result$call <- match.call()
 
   return(result)
 }
 
-#' @title PRIM find split candidates
-#' @description Find all box candidates for a given (sub)set
-#' @details This function goes through all columns of the dataset and tries to findbox candidates based on the quantile peeling.quantile and minimum support min.support. Note that the indexes returned are those that have to be removed in order to create the box!
-#' @param X Data frame with observations (may be a subset of original data)
-#' @param y Dependent variable, usually a numeric vector
-#' @param peeling.quantile Quantile to peel off
-#' @param min.support Minimal size of a box
-#' @param max.peel Maximal size of a peel
-#' @param quality.function Function to use to determine box quality
-#' @return A list of potential boxes
-#' @author Jurian Baas
-#' @importFrom stats quantile
-prim.candidates.find <- function(X, y, peeling.quantile, min.support, max.peel, quality.function) {
-
-  i <- 1
-  candidates <- list()
-  cnames <- colnames(X)
-
-  N <- nrow(X)
-
-  repeat {
-
-    if(i > ncol(X)) break
-
-    r <- list()
-
-    col <- X[,i]
-
-    # Do something different depending on data type
-    if(is.numeric(col)) {
-
-      quantiles <- stats::quantile(col, c(peeling.quantile, 1 - peeling.quantile), names = FALSE)
-
-      quantile.left <- quantiles[1]
-      quantile.right <- quantiles[2]
-
-      idx.left <- col < quantile.left
-      idx.right <- col > quantile.right
-
-      left.support <- sum(idx.left)
-      right.support <- sum(idx.right)
-
-      left.support.complement <- N - left.support
-      right.support.complement <- N - right.support
-
-      if(left.support > 0 & left.support / N <= max.peel & left.support.complement / N >= min.support) {
-        r <- c(r, list( list (
-          value = quantile.left,
-          operator = ">=",
-          type = "numeric",
-          quality = quality.function(y[!idx.left]),
-          support = left.support / N,
-          idx = which(idx.left),
-          colname = cnames[i]
-        )))
-      }
-
-      if(right.support > 0 & right.support / N <= max.peel  & right.support.complement / N >= min.support) {
-        r <- c(r, list( list (
-          value = quantile.right,
-          operator = "<=",
-          type = "numeric",
-          quality = quality.function(y[!idx.right]),
-          support = right.support / N,
-          idx = which(idx.right),
-          colname = cnames[i]
-        )))
-      }
-
-    } else if (is.logical(col)  ) {
-
-      # Don't check if column consists of only T or F
-      if(any(col) & any(!col)) {
-
-        idx.true <- col
-        idx.false <- !col
-
-        support.true <- sum(col)
-        support.false <- sum(!col)
-
-        if(support.true / N <= max.peel & support.false / N >= min.support) {
-          r <- c(r, list( list (
-            value = FALSE,
-            operator = "==",
-            type = "logical",
-            quality = quality.function(y[!idx.true]),
-            support = support.true / N,
-            idx = which(idx.true),
-            colname = cnames[i]
-          )))
-        }
-        if(support.false / N <= max.peel & support.true / N >= min.support) {
-          r <- c(r, list( list (
-            value = TRUE,
-            operator = "==",
-            type = "logical",
-            quality = quality.function(y[!idx.false]),
-            support = support.false / N,
-            idx = which(idx.false),
-            colname = cnames[i]
-          )))
-        }
-      }
-
-    } else if (is.factor(col)) {
-
-      lvls <- levels(col)
-      j <- 1
-
-      repeat {
-
-        if(j > length(lvls)) break
-
-        lvl <- lvls[j]
-
-        idx <- col == lvl
-
-        support.lvl <- sum(idx)
-
-        if(support.lvl > 0) {
-
-          support.lvl.complement <- N - support.lvl
-
-          if(support.lvl / N <= max.peel & support.lvl.complement / N >= min.support) {
-            r <- c(r, list( list (
-              value = lvl,
-              operator = "!=",
-              type = "factor",
-              quality = quality.function(y[!idx]),
-              support = support.lvl / N,
-              idx = which(idx),
-              colname = cnames[i]
-            )))
-          }
-
-        }
-
-
-        j <- j + 1
-      }
-
-    }
-
-
-    if(length(r) > 0) {
-      candidates <- c(candidates, r)
-    }
-
-    i <- i + 1
-
-  }
-
-  return(candidates)
-}
-
+#-------------------------------------------------------------------------------------------#
+################################### PRIM PRIVATE FUNCTIONS ##################################
+#-------------------------------------------------------------------------------------------#
 
 #' @title Find the optimal box depending on the strategy
 #' @description Finds the box with the highest quality or the box closest to the maximum quality minus 2 times the standard error

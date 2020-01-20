@@ -23,6 +23,16 @@ bool SubBox::isBetterThan(const SubBox& cmp) const {
   return q || (e && s);
 }
 
+List SubBox::toList() const {
+  return List::create(
+    _["column"] = col,
+    _["type"] = type,
+    _["value"] = value,
+    _["quality"] = quality,
+    _["support"] = support
+  );
+}
+
 SubBox ColWorker::findNumCandidate(const int& colId) {
 
   const pCol col = M.column(colId);
@@ -60,25 +70,29 @@ SubBox ColWorker::findNumCandidate(const int& colId) {
 
   SubBox left, right;
   bool leftFound = false, rightFound = false;
+  const double leftSupport = leftKeepCount / (double)N;
 
-  if(leftRemoveCount > 0 && leftKeepCount / N >= minSup) {
+  if(leftRemoveCount > 0 && leftSupport >= minSup) {
     leftFound = true;
     left = {
       leftRemove,
       colId,
       leftQuantile,
       leftMean,
+      leftSupport,
       BOX_NUM_LEFT
     };
   }
 
-  if(rightRemoveCount > 0 && rightKeepCount / N >= minSup) {
+  const double rightSupport = rightKeepCount / (double)N;
+  if(rightRemoveCount > 0 && rightSupport >= minSup) {
     rightFound = true;
     right = {
       rightRemove,
       colId,
       rightQuantile,
       rightMean,
+      rightSupport,
       BOX_NUM_RIGHT
     };
   }
@@ -122,13 +136,15 @@ SubBox ColWorker::findCatCandidate(const int& colId) {
     if(remove.size() == 0) continue;
 
     const double removeFraction = remove.size() / (double) (remove.size() + keepSize);
-    if(removeFraction < alpha && keepSize / N >= minSup) {
+    const double support = keepSize / (double)N;
+    if(removeFraction < alpha && support >= minSup) {
 
       newSubBox = {
         remove,
         colId,
         (double) c,
         quality,
+        support,
         BOX_CATEGORY
       };
 
@@ -146,7 +162,7 @@ SubBox ColWorker::findCatCandidate(const int& colId) {
 void ColWorker::operator()(size_t begin, size_t end) {
 
   SubBox newSubBox;
-  subBoxFound = false;
+
   for(size_t i = begin; i < end; i++) {
 
     try {
@@ -171,6 +187,7 @@ void ColWorker::operator()(size_t begin, size_t end) {
       // No subBox was found for this column
     }
   }
+
 };
 
 void ColWorker::join(const ColWorker& cw) {

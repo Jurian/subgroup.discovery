@@ -30,12 +30,14 @@ struct SubBox {
   int col;
   double value;
   double quality;
+  double support;
   int type;
 
   bool isBetterThan(const SubBox& cmp) const;
+  List toList() const;
 };
 
-struct ColWorker : public RcppParallel::Worker {
+struct ColWorker : public Worker {
 
   const dMat& M;
   const dVec& y;
@@ -44,7 +46,7 @@ struct ColWorker : public RcppParallel::Worker {
   const vMap& colOrders;
   const double& alpha;
   const double& minSup;
-  const int masked;
+  const int& masked;
   const bool* mask;
 
   bool subBoxFound;
@@ -59,7 +61,7 @@ struct ColWorker : public RcppParallel::Worker {
       const vMap& colOrders,
       const double& alpha,
       const double& minSup,
-      const int masked,
+      const int& masked,
       const bool* mask)
     : M(M),
       y(y),
@@ -82,7 +84,8 @@ struct ColWorker : public RcppParallel::Worker {
       minSup(cw.minSup),
       masked(cw.masked),
       mask(cw.mask),
-      subBoxFound(false) {};
+      subBoxFound(cw.subBoxFound),
+      bestSubBox(cw.bestSubBox) {};
 
   void operator()(size_t begin, size_t end);
   void join(const ColWorker& cw);

@@ -44,7 +44,7 @@ vector<SubBox> findSubBoxes(
     const vMap& colOrders,
     const double& alpha,
     const double& minSup,
-    const bool& verbose) {
+    const bool& parallel) {
 
   bool* mask = new bool[M.nrow()]{};
   int masked = 0;
@@ -52,6 +52,8 @@ vector<SubBox> findSubBoxes(
   bool subBoxFound;
 
   vector<SubBox> peelSteps;
+
+  const int granularity = parallel ? 1 : M.ncol();
 
   do {
 
@@ -66,7 +68,7 @@ vector<SubBox> findSubBoxes(
         masked,
         mask);
 
-    parallelReduce(0, M.ncol(), cw);
+    parallelReduce(0, M.ncol(), cw, granularity);
 
     subBoxFound = cw.subBoxFound;
 
@@ -79,18 +81,6 @@ vector<SubBox> findSubBoxes(
       }
 
       masked += bestSubBox.remove.size();
-
-      if(verbose) {
-        int keepSize = M.nrow() - masked;
-        double boxSize = keepSize / M.nrow() ;
-
-        Rcout << M.nrow() << endl;
-        Rcout << masked << endl;
-        Rcout << keepSize << endl;
-        Rcout << boxSize << endl << endl;
-      }
-
-
       peelSteps.push_back(bestSubBox);
     }
 
@@ -99,13 +89,13 @@ vector<SubBox> findSubBoxes(
   return peelSteps;
 }
 
-void peel (
+List peel (
     const NumericMatrix& M,
     const NumericVector& y,
     const IntegerVector& colTypes,
     const double& alpha,
     const double& minSup,
-    const bool& verbose) {
+    const bool& parallel) {
 
   iMap colCats;
   vMap colOrders;
@@ -125,7 +115,7 @@ void peel (
     }
   }
 
-  vector<SubBox> peelSteps = findSubBoxes(
+  vector<SubBox> boxes = findSubBoxes(
     dMat(M),
     dVec(y),
     iVec(colTypes),
@@ -133,8 +123,27 @@ void peel (
     colOrders,
     alpha,
     minSup,
-    verbose
+    parallel
   );
-  //return peel(pc);
+
+  List peelSteps = List::create();
+  for(vector<SubBox>::iterator it = boxes.begin(); it != boxes.end(); ++it) {
+    peelSteps.push_back((*it).toList());
+  }
+
+  return peelSteps;
+}
+
+List validate (
+    const List& peelSteps,
+    const NumericMatrix& M,
+    const NumericVector& y) {
+
+  const double alpha = peelSteps["peeling.quantile"];
+  const double minSup = peelSteps["min.support"];
+  const IntegerVector colTypes = peelSteps["col.types"];
+
+  return List::create();
+
 }
 
