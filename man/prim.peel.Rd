@@ -2,31 +2,38 @@
 % Please edit documentation in R/prim.R
 \name{prim.peel}
 \alias{prim.peel}
-\title{Bump hunting using the Patient Rule Induction Method}
+\title{Find the optimal sub-box using the PRIM peeling strategy}
 \usage{
-prim.peel(X, y, N, peeling.quantile, min.support, max.peel,
-  quality.function)
+prim.peel(
+  formula,
+  data,
+  X,
+  y,
+  peeling.quantile = 0.03,
+  min.support = 0.05,
+  parallel = T
+)
 }
 \arguments{
-\item{X}{Data frame to find rules in}
+\item{formula}{Formula with a response and terms}
 
-\item{y}{Response vector, usually of type numeric}
+\item{data}{Data frame to find rules in}
 
-\item{N}{Size of entire data set}
+\item{X}{Optionally instead of using a formula: Data frame to find rules in}
+
+\item{y}{Optionally instead of using a formula: Response vector, usually of type numeric}
 
 \item{peeling.quantile}{Quantile to peel off for numerical variables}
 
-\item{min.support}{Minimal size of a box to be valid, as a fraction}
+\item{min.support}{Minimal size of a box to be valid}
 
-\item{max.peel}{Maximal size of a peel, as fraction}
-
-\item{quality.function}{Which function to use to determine the quality of a box}
+\item{parallel}{Peel columns in parallel, faster for many columns (defaults to true)}
 }
 \value{
 An S3 object of class prim.peel
 }
 \description{
-Peeling function for bump hunting using the Patient Rule Induction Method (PRIM).
+By iteratively removing a small portion of the data... Note that categorical data has to be in factor form.
 }
 \author{
 Jurian Baas

@@ -42,13 +42,13 @@ Past Usage:
  on Computer Applications and Medical Care (pp. 261--265).
  IEEE Computer Society Press.
 
-The diagnostic, binary-valued variable investigated is whether the
+ The diagnostic, binary-valued variable investigated is whether the
  patient shows signs of diabetes according to World Health Organization
  criteria (i.e., if the 2 hour post-load plasma glucose was at least
  200 mg/dl at any survey  examination or if found during routine medical
  care). The population lives near Phoenix, Arizona, USA.
 
-Results: Their ADAP algorithm makes a real-valued prediction between
+ Results: Their ADAP algorithm makes a real-valued prediction between
  0 and 1.  This was transformed into a binary decision using a cutoff of
  0.448.  Using 576 training instances, the sensitivity and specificity
  of their algorithm was 76% on the remaining 192 instances.

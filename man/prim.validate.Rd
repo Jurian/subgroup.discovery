@@ -2,9 +2,9 @@
 % Please edit documentation in R/prim.R
 \name{prim.validate}
 \alias{prim.validate}
-\title{Bump hunting using the Patient Rule Induction Method}
+\title{Validate peels}
 \usage{
-prim.validate(peel.result, X, y, optimal.box)
+prim.validate(peel.result, X, y)
 }
 \arguments{
 \item{peel.result}{An S3 object of class prim.peel}
@@ -12,8 +12,6 @@ prim.validate(peel.result, X, y, optimal.box)
 \item{X}{A data frame with at least those columns that were used in creating the prim.peel S3 object}
 
 \item{y}{Response vector, usually of type numeric}
-
-\item{optimal.box}{Choose the box with the highest quality or a simpler box, two standard errors from the optimum}
 }
 \value{
 An S3 object of type prim.validate
