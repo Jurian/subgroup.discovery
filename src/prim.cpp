@@ -29,7 +29,6 @@ IntegerVector sortIndex(const dCol& col) {
        }
   );
   return index;
-  //return iVec(index);
 }
 
 int countCategories(const dCol& col) {
@@ -43,8 +42,7 @@ vector<SubBox> findSubBoxes(
     const iMap& colCats,
     const vMap& colOrders,
     const double& alpha,
-    const double& minSup,
-    const bool& parallel) {
+    const double& minSup) {
 
   bool* mask = new bool[M.nrow()]{};
   int masked = 0;
@@ -52,8 +50,6 @@ vector<SubBox> findSubBoxes(
   bool subBoxFound;
 
   vector<SubBox> peelSteps;
-
-  const int granularity = parallel ? 1 : M.ncol();
 
   do {
 
@@ -68,7 +64,7 @@ vector<SubBox> findSubBoxes(
         masked,
         mask);
 
-    parallelReduce(0, M.ncol(), cw, granularity);
+    parallelReduce(0, M.ncol(), cw);
 
     subBoxFound = cw.subBoxFound;
 
@@ -94,8 +90,7 @@ List peel (
     const NumericVector& y,
     const IntegerVector& colTypes,
     const double& alpha,
-    const double& minSup,
-    const bool& parallel) {
+    const double& minSup) {
 
   iMap colCats;
   vMap colOrders;
@@ -122,8 +117,7 @@ List peel (
     colCats,
     colOrders,
     alpha,
-    minSup,
-    parallel
+    minSup
   );
 
   List peelSteps = List::create();
@@ -139,11 +133,96 @@ List validate (
     const NumericMatrix& M,
     const NumericVector& y) {
 
-  const double alpha = peelSteps["peeling.quantile"];
-  const double minSup = peelSteps["min.support"];
-  const IntegerVector colTypes = peelSteps["col.types"];
+  const int N = M.nrow();
 
-  return List::create();
+  int masked = 0;
+  bool* mask = new bool[M.nrow()]{};
+
+  List validationSteps = List::create();
+
+  for(List::const_iterator it = peelSteps.begin(); it != peelSteps.end(); ++it) {
+
+    const List peel = *it;
+    const int colId = peel["column"];
+    const int type = peel["type"];
+    const double value = peel["value"];
+
+    double quality = 0;
+
+    int k = 1;
+    vector<int> remove;
+
+    dCol column = M( _, colId);
+
+    if(type == BOX_NUM_LEFT) {
+
+      for(int i = 0; i < column.size(); i++) {
+
+        if(mask[i]) continue;
+
+        if(column[i] < value) {
+          remove.push_back(i);
+        } else {
+          // Cumulative moving avarage of rows we keep
+          quality += (y[i] - quality) / k++;
+        }
+
+      }
+
+    } else if (type == BOX_NUM_RIGHT) {
+
+      for(int i = 0; i < column.size(); i++) {
+
+        if(mask[i]) continue;
+
+        if(column[i] > value) {
+          remove.push_back(i);
+        } else {
+          // Cumulative moving avarage of rows we keep
+          quality += (y[i] - quality) / k++;
+        }
+
+      }
+
+    } else if (type == BOX_CATEGORY) {
+
+      for(int i = 0; i < column.size(); i++) {
+
+        if(mask[i]) continue;
+
+        if(column[i] == value) {
+          remove.push_back(i);
+        } else {
+          // Cumulative moving avarage of rows we keep
+          quality += (y[i] - quality) / k++;
+        }
+
+      }
+
+    }
+
+    // Add the new subbox to the mask
+    for(size_t i = 0; i < remove.size(); i++) {
+      mask[remove[i]] = true;
+    }
+    masked += remove.size();
+
+    const int keepCount = N - masked;
+    const double support = keepCount / (double)N;
+
+    validationSteps.push_back(
+      List::create(
+        _["column"] = colId,
+        _["type"] = type,
+        _["value"] = value,
+        _["quality"] = quality,
+        _["support"] = support
+      )
+    );
+
+  }
+
+  return validationSteps;
 
 }
 

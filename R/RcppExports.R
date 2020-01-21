@@ -11,12 +11,10 @@
 #' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
 #' @param alpha The peeling quantile
 #' @param minSup The minimum allowed size of the remainder after a peel
-#' @param parallel Peel columns in parallel, faster for many columns (defaults to true)
 #' @return A list of peeling steps
 #' @author Jurian Baas
-#' @export
-peel <- function(M, y, colTypes, alpha, minSup, parallel = TRUE) {
-    .Call('_subgroup_discovery_peel', PACKAGE = 'subgroup.discovery', M, y, colTypes, alpha, minSup, parallel)
+peel <- function(M, y, colTypes, alpha, minSup) {
+    .Call('_subgroup_discovery_peel', PACKAGE = 'subgroup.discovery', M, y, colTypes, alpha, minSup)
 }
 
 #' PRIM Validate

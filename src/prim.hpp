@@ -30,8 +30,7 @@ vector<SubBox> findSubBoxes(
     const iMap& colCats,
     const vMap& colOrders,
     const double& alpha,
-    const double& minSup,
-    const bool& parallel);
+    const double& minSup);
 
 
 //' PRIM Peel
@@ -44,18 +43,15 @@ vector<SubBox> findSubBoxes(
 //' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
 //' @param alpha The peeling quantile
 //' @param minSup The minimum allowed size of the remainder after a peel
-//' @param parallel Peel columns in parallel, faster for many columns (defaults to true)
 //' @return A list of peeling steps
 //' @author Jurian Baas
-//' @export
 //  [[Rcpp::export]]
 List peel(
     const NumericMatrix& M,
     const NumericVector& y,
     const IntegerVector& colTypes,
     const double& alpha,
-    const double& minSup,
-    const bool& parallel = true);
+    const double& minSup);
 
 //' PRIM Validate
 //'

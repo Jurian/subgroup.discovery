@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // peel
-List peel(const NumericMatrix& M, const NumericVector& y, const IntegerVector& colTypes, const double& alpha, const double& minSup, const bool& parallel);
-RcppExport SEXP _subgroup_discovery_peel(SEXP MSEXP, SEXP ySEXP, SEXP colTypesSEXP, SEXP alphaSEXP, SEXP minSupSEXP, SEXP parallelSEXP) {
+List peel(const NumericMatrix& M, const NumericVector& y, const IntegerVector& colTypes, const double& alpha, const double& minSup);
+RcppExport SEXP _subgroup_discovery_peel(SEXP MSEXP, SEXP ySEXP, SEXP colTypesSEXP, SEXP alphaSEXP, SEXP minSupSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -16,8 +16,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const IntegerVector& >::type colTypes(colTypesSEXP);
     Rcpp::traits::input_parameter< const double& >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< const double& >::type minSup(minSupSEXP);
-    Rcpp::traits::input_parameter< const bool& >::type parallel(parallelSEXP);
-    rcpp_result_gen = Rcpp::wrap(peel(M, y, colTypes, alpha, minSup, parallel));
+    rcpp_result_gen = Rcpp::wrap(peel(M, y, colTypes, alpha, minSup));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -36,7 +35,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_subgroup_discovery_peel", (DL_FUNC) &_subgroup_discovery_peel, 6},
+    {"_subgroup_discovery_peel", (DL_FUNC) &_subgroup_discovery_peel, 5},
     {"_subgroup_discovery_validate", (DL_FUNC) &_subgroup_discovery_validate, 3},
     {NULL, NULL, 0}
 };
