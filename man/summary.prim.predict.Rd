@@ -2,7 +2,7 @@
 % Please edit documentation in R/prim.R
 \name{summary.prim.predict}
 \alias{summary.prim.predict}
-\title{Summarize a PRIM test result object}
+\title{Summarize a PRIM predict result object}
 \usage{
 \method{summary}{prim.predict}(object, ..., round = TRUE, digits = 2)
 }
@@ -19,7 +19,7 @@
 Nothing, this function is called for its side-effects
 }
 \description{
-Summarize a PRIM test result object
+Summarize a PRIM predict result object
 }
 \author{
 Jurian Baas

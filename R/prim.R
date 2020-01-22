@@ -417,8 +417,8 @@ summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
 
 }
 
-#' @title Summarize a PRIM test result object
-#' @description Summarize a PRIM test result object
+#' @title Summarize a PRIM predict result object
+#' @description Summarize a PRIM predict result object
 #' @param object An S3 object of class prim.predict
 #' @param ... Optional arguments to pass on
 #' @param round Optional setting to disable rounding
