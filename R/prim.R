@@ -75,13 +75,16 @@ prim <- function (
   # Turn factors into numerical
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
-  peel.result$peels <- peelCpp(
+  result <- peelCpp(
     M = as.matrix(M),
     y = y,
     colTypes = col.types,
     alpha = peeling.quantile,
     minSup = min.support
   )
+
+  peel.result$peels <- result[["peels"]]
+  peel.result$index <- result[["index"]]
 
   peel.result$rules <- sapply(peel.result$peels, function(peel){
     paste(
@@ -114,7 +117,7 @@ prim <- function (
           levels(X[,peel$column + 1])[peel$value + 1]
         )
       )
-    }), collapse = " AND ")
+    }), collapse = " & ")
   })
 
   return(peel.result)
@@ -174,8 +177,8 @@ predict.prim.peel <- function(object, newdata, ...) {
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
   result <- predictCpp(object$peels, as.matrix(M), y)
-  predict.result$peels <- result[[1]]
-  predict.result$index <- result[[2]]
+  predict.result$peels <- result[["peels"]]
+  predict.result$index <- result[["index"]]
 
   predict.result$peels.simplified <- simplifyRules (
     predict.result$peels,
@@ -195,7 +198,7 @@ predict.prim.peel <- function(object, newdata, ...) {
           levels(X[,peel$column + 1])[peel$value + 1]
         )
       )
-    }), collapse = " AND ")
+    }), collapse = " & ")
   })
 
   return(predict.result)
@@ -413,7 +416,7 @@ summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
   cat("  Box support: ", round(object$peels[[best.box.idx]]$support, digits), "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$rules.simplified, collapse = " AND\n  "))
+  cat(" ", paste0(object$rules.simplified, collapse = "\n  "))
 
 }
 
@@ -444,7 +447,7 @@ summary.prim.predict <- function(object, ..., round = TRUE, digits = 2) {
   cat("  Box support: ", round(object$peels[[best.box.idx]]$support, digits), "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$rules.simplified, collapse = " AND\n  "))
+  cat(" ", paste0(object$rules.simplified, collapse = "\n  "))
 
 }
 

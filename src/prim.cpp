@@ -35,7 +35,7 @@ int countCategories(const dCol& col) {
   return unique(col).length();
 }
 
-vector<SubBox> findSubBoxes(
+List findSubBoxes(
     const dMat& M,
     const dVec& y,
     const iVec& colTypes,
@@ -49,7 +49,7 @@ vector<SubBox> findSubBoxes(
 
   bool subBoxFound;
 
-  vector<SubBox> peelSteps;
+  List peelSteps = List::create();
 
   do {
 
@@ -77,12 +77,23 @@ vector<SubBox> findSubBoxes(
       }
 
       masked += bestSubBox.remove.size();
-      peelSteps.push_back(bestSubBox);
+      peelSteps.push_back(bestSubBox.toList());
     }
 
   } while (subBoxFound);
 
-  return peelSteps;
+  IntegerVector finalBoxIndex;
+  for(size_t i = 0; i < M.nrow(); i++) {
+    if(mask[i]) continue;
+    finalBoxIndex.push_back(i);
+  }
+
+  List peelResult = List::create();
+
+  peelResult["peels"] = peelSteps;
+  peelResult["index"] = finalBoxIndex;
+
+  return peelResult;
 }
 
 List peelCpp (
@@ -110,7 +121,7 @@ List peelCpp (
     }
   }
 
-  vector<SubBox> boxes = findSubBoxes(
+  return findSubBoxes(
     dMat(M),
     dVec(y),
     iVec(colTypes),
@@ -119,13 +130,6 @@ List peelCpp (
     alpha,
     minSup
   );
-
-  List peelSteps = List::create();
-  for(vector<SubBox>::iterator it = boxes.begin(); it != boxes.end(); ++it) {
-    peelSteps.push_back((*it).toList());
-  }
-
-  return peelSteps;
 }
 
 List predictCpp (
@@ -230,8 +234,8 @@ List predictCpp (
 
   List validationResult = List::create();
 
-  validationResult.push_back(validationSteps);
-  validationResult.push_back(finalBoxIndex);
+  validationResult["peels"] = validationSteps;
+  validationResult["index"] = finalBoxIndex;
 
   return validationResult;
 

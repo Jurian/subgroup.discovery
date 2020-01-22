@@ -23,7 +23,7 @@ using dCol = NumericMatrix::ConstColumn;
 IntegerVector sortIndex(const dCol& col);
 int countCategories(const dCol& col);
 
-vector<SubBox> findSubBoxes(
+List findSubBoxes(
     const dMat& M,
     const dVec& y,
     const iVec& colTypes,
