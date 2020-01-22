@@ -237,3 +237,78 @@ List predictCpp (
 
 }
 
+List simplifyRules(
+    const List& peelSteps,
+    const IntegerVector& colTypes,
+    const int& bestBoxIndex) {
+
+  List compressedBoxes = List::create();
+
+  for(int col = 0; col < colTypes.size(); col++) {
+
+    const int colType = colTypes[col];
+    bool colUsed = false;
+    List bestBoxes = List::create();
+
+    if(colType == COL_NUMERIC) {
+
+      // Find boxes for this column, but don't consider boxes that are worse than the best box
+      for(int boxIdx = 0; boxIdx <= bestBoxIndex; boxIdx++) {
+
+        const List peel = peelSteps[boxIdx];
+        const int _col = peel["column"];
+        const int _boxType = peel["type"];
+        const double _value = peel["value"];
+
+        if(_col != col) continue;
+        colUsed = true;
+
+        if(_boxType == BOX_NUM_LEFT) {
+
+          if(bestBoxes.containsElementNamed("left")) {
+            const List curBest = bestBoxes["left"];
+            const double value = curBest["value"];
+            if(_value > value) {
+              bestBoxes["left"] = peel;
+            }
+          } else {
+            bestBoxes["left"] = peel;
+          }
+
+        } else if (_boxType == BOX_NUM_RIGHT) {
+
+          if(bestBoxes.containsElementNamed("right")) {
+            const List curBest = bestBoxes["right"];
+            const double value = curBest["value"];
+            if(_value < value) {
+              bestBoxes["right"] = peel;
+            }
+          } else {
+            bestBoxes["right"] = peel;
+          }
+        }
+      }
+
+    } else if(colType == COL_CATEGORICAL) {
+
+      for(int boxIdx = 0; boxIdx <= bestBoxIndex; boxIdx++) {
+
+        const List peel = peelSteps[boxIdx];
+        const int _col = peel["column"];
+        if(_col != col) continue;
+
+        colUsed = true;
+        bestBoxes.push_back(peel);
+      }
+
+    }
+
+    if(colUsed) compressedBoxes.push_back(bestBoxes);
+  }
+
+  return compressedBoxes;
+}
+
+
+
+

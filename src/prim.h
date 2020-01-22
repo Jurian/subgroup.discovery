@@ -69,4 +69,20 @@ List predictCpp(
     const NumericMatrix& M,
     const NumericVector& y);
 
+//' PRIM Simplify Rules
+//'
+//' This function will go through all boxes that were found and tries to remove redundant ones,
+//' as well as grouping them by column
+//'
+//' @param peelSteps A list of peeling steps
+//' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
+//' @param bestBoxIndex The (zero) index of the best box
+//' @return A list of peeling steps
+//' @author Jurian Baas
+//  [[Rcpp::export]]
+List simplifyRules(
+    const List& peelSteps,
+    const IntegerVector& colTypes,
+    const int& bestBoxIndex);
+
 #endif

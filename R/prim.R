@@ -83,10 +83,10 @@ prim <- function (
     minSup = min.support
   )
 
-  peel.result$rules <- sapply(peel.result$peels, function(peel) {
+  peel.result$rules <- sapply(peel.result$peels, function(peel){
     paste(
       peel.result$col.names[peel$column + 1],
-      switch(peel$type + 1, ">", "<", "!="),
+      switch(peel$type + 1, "\u2265", "\u2264", "!="),
       switch(
         peel$type + 1,
         peel$value,
@@ -94,6 +94,27 @@ prim <- function (
         levels(X[,peel$column + 1])[peel$value + 1]
       )
     )
+  })
+
+  peel.result$peels.simplified <- simplifyRules (
+    peel.result$peels,
+    peel.result$col.types,
+    which.max(sapply(peel.result$peels, function(peel){peel$quality})) - 1)
+
+  peel.result$rules.simplified <- sapply(peel.result$peels.simplified , function(column.rules) {
+
+    paste(sapply(column.rules, function(peel){
+      paste(
+        peel.result$col.names[peel$column + 1],
+        switch(peel$type + 1, "\u2265", "\u2264", "!="),
+        switch(
+          peel$type + 1,
+          peel$value,
+          peel$value,
+          levels(X[,peel$column + 1])[peel$value + 1]
+        )
+      )
+    }), collapse = " AND ")
   })
 
   return(peel.result)
@@ -138,14 +159,14 @@ predict.prim.peel <- function(object, newdata, ...) {
   if(!identical(col.types, object$col.types)) stop("Columns in X differ from those in peeling result")
   if(length(object$peels) == 0) stop("No peeling steps in provided result")
 
-  validation.result <- list()
-  class(validation.result) <- "prim.predict"
-  validation.result$call <- match.call()
-  validation.result$N <- nrow(X)
-  validation.result$global.quality <- mean(y)
-  validation.result$col.types <- col.types
-  validation.result$col.names <- colnames(X)
-  validation.result$peel.result <- object
+  predict.result <- list()
+  class(predict.result) <- "prim.predict"
+  predict.result$call <- match.call()
+  predict.result$N <- nrow(X)
+  predict.result$global.quality <- mean(y)
+  predict.result$col.types <- col.types
+  predict.result$col.names <- colnames(X)
+  predict.result$peel.result <- object
 
   M <- X
 
@@ -153,10 +174,31 @@ predict.prim.peel <- function(object, newdata, ...) {
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
   result <- predictCpp(object$peels, as.matrix(M), y)
-  validation.result$peels <- result[[1]]
-  validation.result$index <- result[[2]]
+  predict.result$peels <- result[[1]]
+  predict.result$index <- result[[2]]
 
-  return(validation.result)
+  predict.result$peels.simplified <- simplifyRules (
+    predict.result$peels,
+    predict.result$col.types,
+    which.max(sapply(predict.result$peels, function(peel){peel$quality})) - 1)
+
+  predict.result$rules.simplified <- sapply(predict.result$peels.simplified , function(column.rules) {
+
+    paste(sapply(column.rules, function(peel){
+      paste(
+        predict.result$col.names[peel$column + 1],
+        switch(peel$type + 1, "\u2265", "\u2264", "!="),
+        switch(
+          peel$type + 1,
+          peel$value,
+          peel$value,
+          levels(X[,peel$column + 1])[peel$value + 1]
+        )
+      )
+    }), collapse = " AND ")
+  })
+
+  return(predict.result)
 }
 
 #-------------------------------------------------------------------------------------------#
@@ -250,8 +292,7 @@ plot.prim.peel <- function(x, ...) {
   graphics::abline(v = x$min.support, col = "red", lwd = 2)
   graphics::lines (
     c(1, box.supports),
-    c(x$global.quality, box.qualities)
-  )
+    c(x$global.quality, box.qualities))
   graphics::points (
     c(1, box.supports[1:best.box.idx]),
     c(x$global.quality, box.qualities[1:best.box.idx]),
@@ -261,16 +302,20 @@ plot.prim.peel <- function(x, ...) {
     box.qualities[-(1:best.box.idx)],
     col= "royalblue2", pch = 4, cex = 1, lty = "solid", lwd = 2)
 
-  print.names <- character(length = best.box.idx)
-
-  for(i in 1:(best.box.idx)) {
-    if(i < length(x$peels) & x$peels[[i]]$column == x$peels[[i + 1]]$column) {
-      print.names[i] <- ""
+  print.names <- sapply(1:best.box.idx, function(i) {
+    if(i < length(x$peels)) {
+      # Print labels up to the best box
+      if(x$peels[[i]]$column == x$peels[[i + 1]]$column) {
+        # Don't print a label if the next box overwrites this one
+        return("")
+      } else {
+        return(x$rules[i])
+      }
     } else {
-      print.names[i] <- x$rules[i]
+      # Always print label of the best box
+      return(x$rules[i])
     }
-  }
-  print.names[best.box.idx] <- x$rules[best.box.idx]
+  })
 
   graphics::text (
     box.supports[1:best.box.idx],
@@ -300,12 +345,11 @@ plot.prim.predict <- function(x, ...) {
     xlim = c(1, 0),
     type = "n",
     xlab = "Support", ylab = "Box quality",
-    main = "PRIM validation result")
+    main = "PRIM predict result")
   graphics::abline(v = x$peel.result$min.support, col = "red", lwd = 2)
   graphics::lines (
     c(1, box.supports),
-    c(x$global.quality, box.qualities)
-  )
+    c(x$global.quality, box.qualities))
   graphics::points (
     c(1, box.supports[1:best.box.idx]),
     c(x$global.quality, box.qualities[1:best.box.idx]),
@@ -315,16 +359,20 @@ plot.prim.predict <- function(x, ...) {
     box.qualities[-(1:best.box.idx)],
     col= "royalblue2", pch = 4, cex = 1, lty = "solid", lwd = 2)
 
-  print.names <- character(length = best.box.idx)
-
-  for(i in 1:(best.box.idx)) {
-    if(i < length(x$peels) & x$peels[[i]]$column == x$peels[[i + 1]]$column) {
-      print.names[i] <- ""
+  print.names <- sapply(1:best.box.idx, function(i) {
+    if(i < length(x$peels)) {
+      # Print labels up to the best box
+      if(x$peels[[i]]$column == x$peels[[i + 1]]$column) {
+        # Don't print a label if the next box overwrites this one
+        return("")
+      } else {
+        return(x$peel.result$rules[i])
+      }
     } else {
-      print.names[i] <- x$peel.result$rules[i]
+      # Always print label of the best box
+      return(x$peel.result$rules[i])
     }
-  }
-  print.names[best.box.idx] <- x$peel.result$rules[best.box.idx]
+  })
 
   graphics::text (
     box.supports[1:best.box.idx],
@@ -365,7 +413,7 @@ summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
   cat("  Box support: ", round(object$peels[[best.box.idx]]$support, digits), "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$rules[1:best.box.idx], collapse = "\n  "))
+  cat(" ", paste0(object$rules.simplified, collapse = "\n  "))
 
 }
 
@@ -396,7 +444,7 @@ summary.prim.predict <- function(object, ..., round = TRUE, digits = 2) {
   cat("  Box support: ", round(object$peels[[best.box.idx]]$support, digits), "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$peel.result$rules[1:best.box.idx], collapse = "\n  "))
+  cat(" ", paste0(object$rules.simplified, collapse = "\n  "))
 
 }
 

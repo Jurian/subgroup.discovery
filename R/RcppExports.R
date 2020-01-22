@@ -31,3 +31,17 @@ predictCpp <- function(peelSteps, M, y) {
     .Call(`_subgroup_discovery_predictCpp`, peelSteps, M, y)
 }
 
+#' PRIM Simplify Rules
+#'
+#' This function will go through all boxes that were found and tries to remove redundant ones,
+#' as well as grouping them by column
+#'
+#' @param peelSteps A list of peeling steps
+#' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
+#' @param bestBoxIndex The (zero) index of the best box
+#' @return A list of peeling steps
+#' @author Jurian Baas
+simplifyRules <- function(peelSteps, colTypes, bestBoxIndex) {
+    .Call(`_subgroup_discovery_simplifyRules`, peelSteps, colTypes, bestBoxIndex)
+}
+
