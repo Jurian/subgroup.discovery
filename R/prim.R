@@ -413,7 +413,7 @@ summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
   cat("  Box support: ", round(object$peels[[best.box.idx]]$support, digits), "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$rules.simplified, collapse = "\n  "))
+  cat(" ", paste0(object$rules.simplified, collapse = " AND\n  "))
 
 }
 
@@ -444,7 +444,7 @@ summary.prim.predict <- function(object, ..., round = TRUE, digits = 2) {
   cat("  Box support: ", round(object$peels[[best.box.idx]]$support, digits), "\n")
   cat("\n")
   cat("  ================ RULES ===============", "\n")
-  cat(" ", paste0(object$rules.simplified, collapse = "\n  "))
+  cat(" ", paste0(object$rules.simplified, collapse = " AND\n  "))
 
 }
 
