@@ -4,8 +4,8 @@
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
-#include "quantile.hpp"
-#include "mapreduce.hpp"
+#include "quantile.h"
+#include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
@@ -101,7 +101,7 @@ SubBox ColWorker::findNumCandidate(const int& colId) {
   if(!leftFound && rightFound) return right;
   if(leftFound && !rightFound) return left;
   return left.isBetterThan(right) ? left : right;
-};
+}
 
 SubBox ColWorker::findCatCandidate(const int& colId) {
 
@@ -151,13 +151,13 @@ SubBox ColWorker::findCatCandidate(const int& colId) {
       if(!boxFound || newSubBox.isBetterThan(bestSubBox)) {
         bestSubBox = newSubBox;
         boxFound = true;
-      };
+      }
     }
   }
 
   if(!boxFound) throw 0;
   return bestSubBox;
-};
+}
 
 void ColWorker::operator()(size_t begin, size_t end) {
 
@@ -188,7 +188,7 @@ void ColWorker::operator()(size_t begin, size_t end) {
     }
   }
 
-};
+}
 
 void ColWorker::join(const ColWorker& cw) {
 
@@ -196,4 +196,4 @@ void ColWorker::join(const ColWorker& cw) {
     bestSubBox = cw.bestSubBox;
     subBoxFound = true;
   }
-};
+}

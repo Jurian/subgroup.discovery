@@ -7,7 +7,7 @@
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
-#include "mapreduce.hpp"
+#include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
@@ -46,7 +46,7 @@ vector<SubBox> findSubBoxes(
 //' @return A list of peeling steps
 //' @author Jurian Baas
 //  [[Rcpp::export]]
-List peel(
+List peelCpp(
     const NumericMatrix& M,
     const NumericVector& y,
     const IntegerVector& colTypes,
@@ -63,9 +63,8 @@ List peel(
 //' @param y The labels to evaluate peels
 //' @return A list of peeling steps
 //' @author Jurian Baas
-//' @export
 //  [[Rcpp::export]]
-List validate(
+List predictCpp(
     const List& peelSteps,
     const NumericMatrix& M,
     const NumericVector& y);

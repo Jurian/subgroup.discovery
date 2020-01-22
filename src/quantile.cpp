@@ -2,7 +2,7 @@
 
 #include <Rcpp.h>
 #include <RcppParallel.h>
-#include "quantile.hpp"
+#include "quantile.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;

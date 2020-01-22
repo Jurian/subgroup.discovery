@@ -5,9 +5,9 @@
 
 using namespace Rcpp;
 
-// peel
-List peel(const NumericMatrix& M, const NumericVector& y, const IntegerVector& colTypes, const double& alpha, const double& minSup);
-RcppExport SEXP _subgroup_discovery_peel(SEXP MSEXP, SEXP ySEXP, SEXP colTypesSEXP, SEXP alphaSEXP, SEXP minSupSEXP) {
+// peelCpp
+List peelCpp(const NumericMatrix& M, const NumericVector& y, const IntegerVector& colTypes, const double& alpha, const double& minSup);
+RcppExport SEXP _subgroup_discovery_peelCpp(SEXP MSEXP, SEXP ySEXP, SEXP colTypesSEXP, SEXP alphaSEXP, SEXP minSupSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -16,27 +16,27 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const IntegerVector& >::type colTypes(colTypesSEXP);
     Rcpp::traits::input_parameter< const double& >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< const double& >::type minSup(minSupSEXP);
-    rcpp_result_gen = Rcpp::wrap(peel(M, y, colTypes, alpha, minSup));
+    rcpp_result_gen = Rcpp::wrap(peelCpp(M, y, colTypes, alpha, minSup));
     return rcpp_result_gen;
 END_RCPP
 }
-// validate
-List validate(const List& peelSteps, const NumericMatrix& M, const NumericVector& y);
-RcppExport SEXP _subgroup_discovery_validate(SEXP peelStepsSEXP, SEXP MSEXP, SEXP ySEXP) {
+// predictCpp
+List predictCpp(const List& peelSteps, const NumericMatrix& M, const NumericVector& y);
+RcppExport SEXP _subgroup_discovery_predictCpp(SEXP peelStepsSEXP, SEXP MSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const List& >::type peelSteps(peelStepsSEXP);
     Rcpp::traits::input_parameter< const NumericMatrix& >::type M(MSEXP);
     Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(validate(peelSteps, M, y));
+    rcpp_result_gen = Rcpp::wrap(predictCpp(peelSteps, M, y));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_subgroup_discovery_peel", (DL_FUNC) &_subgroup_discovery_peel, 5},
-    {"_subgroup_discovery_validate", (DL_FUNC) &_subgroup_discovery_validate, 3},
+    {"_subgroup_discovery_peelCpp", (DL_FUNC) &_subgroup_discovery_peelCpp, 5},
+    {"_subgroup_discovery_predictCpp", (DL_FUNC) &_subgroup_discovery_predictCpp, 3},
     {NULL, NULL, 0}
 };
 

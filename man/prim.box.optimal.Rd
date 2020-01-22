@@ -4,10 +4,10 @@
 \alias{prim.box.optimal}
 \title{Find the optimal box depending on the strategy}
 \usage{
-prim.box.optimal(prim.validate)
+prim.box.optimal(prim.predict)
 }
 \arguments{
-\item{prim.validate}{An object of type "prim.validate"}
+\item{prim.predict}{An object of type "prim.predict"}
 }
 \value{
 The index of the optimal box

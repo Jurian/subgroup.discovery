@@ -22,16 +22,16 @@ prim.data.prepare <- function(X) {
 #' @param min.support Minimal size of a box to be valid
 #' @return An S3 object of class prim.peel
 #' @author Jurian Baas
-#' @importFrom stats model.frame model.response complete.cases terms
+#' @importFrom stats model.frame model.response complete.cases terms formula
 #' @export
-prim.peel <- function (
+prim <- function (
   formula,
   data,
   peeling.quantile = 0.03,
   min.support = 0.05) {
 
   #pima.peel <- prim.peel(formula = class ~., data = pima[train.idx,], peeling.quantile = 0.05, min.support = 0.3)
-#pima.validate <- prim.validate(pima.peel, pima[-train.idx, 1:8], pima[-train.idx, 9])
+#pima.validate <- prim.predict(pima.peel, pima[-train.idx, 1:8], pima[-train.idx, 9])
 
   if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
   if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
@@ -69,15 +69,13 @@ prim.peel <- function (
   peel.result$global.quality <- mean(y)
   peel.result$col.types <- col.types
   peel.result$col.names <- colnames(X)
-  peel.result$X <- X;
-  peel.result$y <- y;
 
   M <- X;
 
   # Turn factors into numerical
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
-  peel.result$peels <- peel(
+  peel.result$peels <- peelCpp(
     M = as.matrix(M),
     y = y,
     colTypes = col.types,
@@ -93,7 +91,7 @@ prim.peel <- function (
         peel$type + 1,
         peel$value,
         peel$value,
-        levels(X[,i])[peel$value + 1]
+        levels(X[,peel$column + 1])[peel$value + 1]
       )
     )
   })
@@ -105,18 +103,20 @@ prim.peel <- function (
 #' @title Validate peels
 #' @description Validate the results taken from the PRIM peeling process
 #' @details This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
-#' @param peel.result An S3 object of class prim.peel
-#' @param data Data frame to find rules in
-#' @return An S3 object of type prim.validate
+#' @param object An S3 object of class prim.peel
+#' @param newdata A data frame in which to look for variables with which to predict
+#' @param ... further arguments passed to or from other methods
+#' @return An S3 object of type prim.predict
 #' @author Jurian Baas
+#' @importFrom stats predict model.frame model.response complete.cases terms formula
 #' @export
-prim.validate <- function(peel.result, data) {
+predict.prim.peel <- function(object, newdata, ...) {
 
-  if(class(peel.result) != "prim.peel") {
+  if(class(object) != "prim.peel") {
     stop("Supplied argument is not of class prim.peel, aborting...")
   }
 
-  X <- stats::model.frame(formula(stats::terms(peel.result$formula, data = data, simplify = TRUE)), data)
+  X <- stats::model.frame(formula(stats::terms(object$formula, data = newdata, simplify = TRUE)), newdata)
   y <- stats::model.response(X)
   X <- X[,-1, drop = FALSE]
 
@@ -135,26 +135,26 @@ prim.validate <- function(peel.result, data) {
     stop("Data contains invalid data types, only numeric and factors are allowed. Use prim.data.prepare() to make sure the data is properly set up.")
   })
 
-  if(!identical(col.types, peel.result$col.types)) stop("Columns in X differ from those in peeling result")
-  if(length(peel.result$peels) == 0) stop("No peeling steps in provided result")
+  if(!identical(col.types, object$col.types)) stop("Columns in X differ from those in peeling result")
+  if(length(object$peels) == 0) stop("No peeling steps in provided result")
 
   validation.result <- list()
-  class(validation.result) <- "prim.validate"
+  class(validation.result) <- "prim.predict"
   validation.result$call <- match.call()
   validation.result$N <- nrow(X)
   validation.result$global.quality <- mean(y)
   validation.result$col.types <- col.types
   validation.result$col.names <- colnames(X)
-  validation.result$peel.result <- peel.result
-  validation.result$X <- X
-  validation.result$y <- y
+  validation.result$peel.result <- object
 
   M <- X
 
   # Turn factors into numerical
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
-  validation.result$peels <- validate(peel.result$peels, as.matrix(M), y)
+  result <- predictCpp(object$peels, as.matrix(M), y)
+  validation.result$peels <- result[[1]]
+  validation.result$index <- result[[2]]
 
   return(validation.result)
 }
@@ -165,28 +165,28 @@ prim.validate <- function(peel.result, data) {
 
 #' @title Find the optimal box depending on the strategy
 #' @description Finds the box with the highest quality or the box closest to the maximum quality minus 2 times the standard error
-#' @param prim.validate An object of type "prim.validate"
+#' @param prim.predict An object of type "prim.predict"
 #' @author Jurian Baas
 #' @importFrom utils tail
 #' @return The index of the optimal box
-prim.box.optimal <- function(prim.validate) {
+prim.box.optimal <- function(prim.predict) {
 
-  if(class(prim.validate) != "prim.validate")
-    stop("Argument is not of class prim.validate")
+  if(class(prim.predict) != "prim.predict")
+    stop("Argument is not of class prim.predict")
 
-  if(prim.validate$optimal.box == "best") {
-    best.box.idx <- which.max(prim.validate$box.qualities)
+  if(prim.predict$optimal.box == "best") {
+    best.box.idx <- which.max(prim.predict$box.qualities)
   } else {
-    best.box.idx <- which.max(prim.validate$box.qualities)
+    best.box.idx <- which.max(prim.predict$box.qualities)
     # Find the ordering of boxes leading up and including the best box
-    o <- order(prim.validate$box.qualities[1:best.box.idx])
+    o <- order(prim.predict$box.qualities[1:best.box.idx])
     # The new optimal is 2 standard errors below the maximum
-    new.optimal <- utils::tail(prim.validate$box.qualities[o], n = 1) - (2 * prim.validate$metrics$se)
+    new.optimal <- utils::tail(prim.predict$box.qualities[o], n = 1) - (2 * prim.predict$metrics$se)
     # Find the box which is closest to this new optimal
-    cutoff.point <- o[which.min(abs(prim.validate$box.qualities[o] - new.optimal))]
+    cutoff.point <- o[which.min(abs(prim.predict$box.qualities[o] - new.optimal))]
     # There could be another point close by with a better quality
     # So we pick the optimal in the subset defined by the new best box
-    best.box.idx <- which.max(prim.validate$box.qualities[1:cutoff.point])
+    best.box.idx <- which.max(prim.predict$box.qualities[1:cutoff.point])
   }
   if(length(best.box.idx) == 0) stop("Could not find a best box, try adding more features")
   return(best.box.idx)
@@ -194,17 +194,17 @@ prim.box.optimal <- function(prim.validate) {
 
 #' @title Calculate statistical metrics
 #' @description This function calculates the mean, standard deviation, standard error of the mean, 95% confidence intervals
-#' @param prim.validate An object of type "prim validate"
+#' @param prim.predict An object of type "prim validate"
 #' @return A list with elements described above
 #' @author Jurian Baas
 #' @importFrom stats sd
-prim.validate.metrics <- function(prim.validate) {
+prim.predict.metrics <- function(prim.predict) {
 
-  if(class(prim.validate) != "prim.validate")
-    stop("Supplied argument not of class prim.validate")
+  if(class(prim.predict) != "prim.predict")
+    stop("Supplied argument not of class prim.predict")
 
   # Name it x for clearer code
-  x <- prim.validate$box.qualities
+  x <- prim.predict$box.qualities
   n <- length(x)
 
   metrics <- list()
@@ -280,14 +280,14 @@ plot.prim.peel <- function(x, ...) {
 }
 
 #' @title Plot PRIM test result
-#' @description Plot an S3 object of class prim.validate
-#' @param x An S3 object of class prim.validate
+#' @description Plot an S3 object of class prim.predict
+#' @param x An S3 object of class prim.predict
 #' @param ... Optional arguments to pass on
 #' @return Nothing, this function is called for its side-effects
 #' @author Jurian Baas
 #' @export
 #' @importFrom graphics par plot points text
-plot.prim.validate <- function(x, ...) {
+plot.prim.predict <- function(x, ...) {
 
   box.qualities <- sapply(x$peels, function(peel){peel$quality})
   box.supports <- sapply(x$peels, function(peel){peel$support})
@@ -371,19 +371,19 @@ summary.prim.peel <- function(object, ..., round = TRUE, digits = 2) {
 
 #' @title Summarize a PRIM test result object
 #' @description Summarize a PRIM test result object
-#' @param object An S3 object of class prim.validate
+#' @param object An S3 object of class prim.predict
 #' @param ... Optional arguments to pass on
 #' @param round Optional setting to disable rounding
 #' @param digits Optional setting to control number of digits to round
 #' @author Jurian Baas
 #' @return Nothing, this function is called for its side-effects
 #' @export
-summary.prim.validate <- function(object, ..., round = TRUE, digits = 2) {
+summary.prim.predict <- function(object, ..., round = TRUE, digits = 2) {
 
   if(!round)  digits = 7
 
   cat("  ======================================", "\n")
-  cat("  ======== PRIM VALIDATE RESULT ========", "\n")
+  cat("  ======== PRIM PREDICT RESULT ========", "\n")
   cat("  ======================================", "\n")
   cat("\n")
   best.box.idx <- which.max(sapply(object$peels, function(peel){peel$quality}))

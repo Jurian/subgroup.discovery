@@ -13,8 +13,8 @@
 #' @param minSup The minimum allowed size of the remainder after a peel
 #' @return A list of peeling steps
 #' @author Jurian Baas
-peel <- function(M, y, colTypes, alpha, minSup) {
-    .Call('_subgroup_discovery_peel', PACKAGE = 'subgroup.discovery', M, y, colTypes, alpha, minSup)
+peelCpp <- function(M, y, colTypes, alpha, minSup) {
+    .Call(`_subgroup_discovery_peelCpp`, M, y, colTypes, alpha, minSup)
 }
 
 #' PRIM Validate
@@ -27,8 +27,7 @@ peel <- function(M, y, colTypes, alpha, minSup) {
 #' @param y The labels to evaluate peels
 #' @return A list of peeling steps
 #' @author Jurian Baas
-#' @export
-validate <- function(peelSteps, M, y) {
-    .Call('_subgroup_discovery_validate', PACKAGE = 'subgroup.discovery', peelSteps, M, y)
+predictCpp <- function(peelSteps, M, y) {
+    .Call(`_subgroup_discovery_predictCpp`, peelSteps, M, y)
 }
 

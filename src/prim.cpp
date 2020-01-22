@@ -4,8 +4,8 @@
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
-#include "prim.hpp"
-#include "mapreduce.hpp"
+#include "prim.h"
+#include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
@@ -85,7 +85,7 @@ vector<SubBox> findSubBoxes(
   return peelSteps;
 }
 
-List peel (
+List peelCpp (
     const NumericMatrix& M,
     const NumericVector& y,
     const IntegerVector& colTypes,
@@ -128,7 +128,7 @@ List peel (
   return peelSteps;
 }
 
-List validate (
+List predictCpp (
     const List& peelSteps,
     const NumericMatrix& M,
     const NumericVector& y) {
@@ -222,7 +222,18 @@ List validate (
 
   }
 
-  return validationSteps;
+  IntegerVector finalBoxIndex;
+  for(int i = 0; i < N; i++) {
+    if(mask[i]) continue;
+    finalBoxIndex.push_back(i);
+  }
+
+  List validationResult = List::create();
+
+  validationResult.push_back(validationSteps);
+  validationResult.push_back(finalBoxIndex);
+
+  return validationResult;
 
 }
 
