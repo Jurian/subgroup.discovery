@@ -1,3 +1,22 @@
+
+# Subgroup Discovery
+# Copyright (C) 2020  Jurian Baas
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
 #-------------------------------------------------------------------------------------------#
 ################################## PRIM INTERFACE FUNCTIONS #################################
 #-------------------------------------------------------------------------------------------#
@@ -7,6 +26,11 @@
 #' @param X The data frame to prepare
 #' @return The same data frame, with only numerical and factor data
 #' @author Jurian Baas
+#' @examples
+#' \donttest{
+#'   data(credit)
+#'   credit <- prim.data.prepare(credit)
+#' }
 #' @export
 prim.data.prepare <- function(X) {
   violating.cols <- !(sapply(X, is.numeric) | sapply(X, is.factor))
@@ -23,15 +47,20 @@ prim.data.prepare <- function(X) {
 #' @return An S3 object of class prim.peel
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response complete.cases terms formula
+#' @examples
+#' \donttest{
+#'   data(pima)
+#'   pima <- prim.data.prepare(pima)
+#'   pima.model <- prim(class ~. , pima, 0.3, 0.4)
+#'   plot(pima.model)
+#'   summary(pima.model)
+#' }
 #' @export
 prim <- function (
   formula,
   data,
   peeling.quantile = 0.03,
   min.support = 0.05) {
-
-  #pima.peel <- prim.peel(formula = class ~., data = pima[train.idx,], peeling.quantile = 0.05, min.support = 0.3)
-#pima.validate <- prim.predict(pima.peel, pima[-train.idx, 1:8], pima[-train.idx, 9])
 
   if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
   if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
@@ -133,6 +162,16 @@ prim <- function (
 #' @return An S3 object of type prim.predict
 #' @author Jurian Baas
 #' @importFrom stats predict model.frame model.response complete.cases terms formula
+#' @examples
+#' \donttest{
+#'   data(ames)
+#'   ames.sample <- sample(nrow(ames), nrow(ames) * 0.75)
+#'   ames <- prim.data.prepare(ames)
+#'   ames.model <- prim(SalePrice ~ . - PID - Order, ames[ames.sample,])
+#'   ames.predict <- predict(ames.model, ames[-ames.sample,])
+#'   plot(ames.model)
+#'   plot(ames.predict)
+#' }
 #' @export
 predict.prim.peel <- function(object, newdata, ...) {
 
@@ -205,68 +244,6 @@ predict.prim.peel <- function(object, newdata, ...) {
 }
 
 #-------------------------------------------------------------------------------------------#
-################################### PRIM PRIVATE FUNCTIONS ##################################
-#-------------------------------------------------------------------------------------------#
-
-#' @title Find the optimal box depending on the strategy
-#' @description Finds the box with the highest quality or the box closest to the maximum quality minus 2 times the standard error
-#' @param prim.predict An object of type "prim.predict"
-#' @author Jurian Baas
-#' @importFrom utils tail
-#' @return The index of the optimal box
-prim.box.optimal <- function(prim.predict) {
-
-  if(class(prim.predict) != "prim.predict")
-    stop("Argument is not of class prim.predict")
-
-  if(prim.predict$optimal.box == "best") {
-    best.box.idx <- which.max(prim.predict$box.qualities)
-  } else {
-    best.box.idx <- which.max(prim.predict$box.qualities)
-    # Find the ordering of boxes leading up and including the best box
-    o <- order(prim.predict$box.qualities[1:best.box.idx])
-    # The new optimal is 2 standard errors below the maximum
-    new.optimal <- utils::tail(prim.predict$box.qualities[o], n = 1) - (2 * prim.predict$metrics$se)
-    # Find the box which is closest to this new optimal
-    cutoff.point <- o[which.min(abs(prim.predict$box.qualities[o] - new.optimal))]
-    # There could be another point close by with a better quality
-    # So we pick the optimal in the subset defined by the new best box
-    best.box.idx <- which.max(prim.predict$box.qualities[1:cutoff.point])
-  }
-  if(length(best.box.idx) == 0) stop("Could not find a best box, try adding more features")
-  return(best.box.idx)
-}
-
-#' @title Calculate statistical metrics
-#' @description This function calculates the mean, standard deviation, standard error of the mean, 95% confidence intervals
-#' @param prim.predict An object of type "prim validate"
-#' @return A list with elements described above
-#' @author Jurian Baas
-#' @importFrom stats sd
-prim.predict.metrics <- function(prim.predict) {
-
-  if(class(prim.predict) != "prim.predict")
-    stop("Supplied argument not of class prim.predict")
-
-  # Name it x for clearer code
-  x <- prim.predict$box.qualities
-  n <- length(x)
-
-  metrics <- list()
-
-  # Calculate sample standard deviation
-  ssd <-  sqrt(sum((x - mean(x))^2) / (n - 1))
-
-  # Calculate standard error of the mean
-  metrics$se <- ssd / sqrt(n)
-  # Calculate standard deviation of sample mean
-  metrics$sd <- stats::sd(x) / sqrt(n)
-
-
-  return(metrics)
-}
-
-#-------------------------------------------------------------------------------------------#
 ################################### S3 PLOTTING FUNCTIONS ###################################
 #-------------------------------------------------------------------------------------------#
 
@@ -274,10 +251,10 @@ prim.predict.metrics <- function(prim.predict) {
 #' @description Plot an S3 object of class prim.peel
 #' @param x An S3 object of class prim.peel
 #' @param ... Optional arguments to pass on
-#' @return Nothing, this function is called for its side-effects
 #' @author Jurian Baas
-#' @export
 #' @importFrom graphics par plot points text
+#' @return Nothing, this function is called for its side-effects
+#' @export
 plot.prim.peel <- function(x, ...) {
 
   box.qualities <- sapply(x$peels, function(peel){peel$quality})
@@ -331,10 +308,10 @@ plot.prim.peel <- function(x, ...) {
 #' @description Plot an S3 object of class prim.predict
 #' @param x An S3 object of class prim.predict
 #' @param ... Optional arguments to pass on
-#' @return Nothing, this function is called for its side-effects
 #' @author Jurian Baas
-#' @export
 #' @importFrom graphics par plot points text
+#' @return Nothing, this function is called for its side-effects
+#' @export
 plot.prim.predict <- function(x, ...) {
 
   box.qualities <- sapply(x$peels, function(peel){peel$quality})

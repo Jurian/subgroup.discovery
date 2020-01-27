@@ -17,8 +17,7 @@ predictCpp(peelSteps, M, y)
 A list of peeling steps
 }
 \description{
-This function iteratively goes through the steps from the peeling process
-and removes any trailing peels which do not improve the overall quality.
+This function evaluates all the steps from the peeling process on new data.
 }
 \author{
 Jurian Baas

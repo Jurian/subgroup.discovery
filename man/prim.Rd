@@ -21,6 +21,15 @@ An S3 object of class prim.peel
 \description{
 By iteratively removing a small portion of the data... Note that categorical data has to be in factor form.
 }
+\examples{
+\donttest{
+  data(pima)
+  pima <- prim.data.prepare(pima)
+  pima.model <- prim(class ~. , pima, 0.3, 0.4)
+  plot(pima.model)
+  summary(pima.model)
+}
+}
 \author{
 Jurian Baas
 }

@@ -1,3 +1,21 @@
+/*
+ * Subgroup Discovery
+ * Copyright (C) 2020  Jurian Baas
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef _PRIM_HPP
 #define _PRIM_HPP
 
@@ -13,22 +31,15 @@ using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
 
-using dMat = RMatrix<double>;
-using dVec = RVector<double>;
-using iVec = RVector<int>;
-using iMap = map<int, int>;
-using vMap = map<int, IntegerVector>;
-using dCol = NumericMatrix::ConstColumn;
-
-IntegerVector sortIndex(const dCol& col);
-int countCategories(const dCol& col);
+IntegerVector sortIndex(const NumericMatrix::ConstColumn& col);
+int countCategories(const NumericMatrix::ConstColumn& col);
 
 List findSubBoxes(
-    const dMat& M,
-    const dVec& y,
-    const iVec& colTypes,
-    const iMap& colCats,
-    const vMap& colOrders,
+    const RMatrix<double>& M,
+    const RVector<double>& y,
+    const RVector<int>& colTypes,
+    const map<int, int>& colCats,
+    const map<int, IntegerVector>& colOrders,
     const double& alpha,
     const double& minSup);
 
@@ -55,8 +66,7 @@ List peelCpp(
 
 //' PRIM Validate
 //'
-//' This function iteratively goes through the steps from the peeling process
-//' and removes any trailing peels which do not improve the overall quality.
+//' This function evaluates all the steps from the peeling process on new data.
 //'
 //' @param peelSteps Peeling result from calling peel()
 //' @param M The data to peel away from
