@@ -7,17 +7,13 @@
 
 0 errors | 0 warnings | 1 note
 
-* This is a new release.
+* This is an update for the previous CRAN release and is not backwards compatible
+
+* The note is due to the use of GNU make, which is requried by RcppParallel
+* As far as I know, this cannot be remedied and is otherwise not an issue
+* Please see https://github.com/RcppCore/RcppParallel/issues/23 for why
 
 ## Reverse dependencies
 
-This is a new release, so there are no reverse dependencies.
+None
 
----
-
-* I have run R CMD check on the NUMBER downstream dependencies.
-  (Summary at ...). 
-  
-* FAILURE SUMMARY
-
-* All revdep maintainers were notified of the release on RELEASE DATE.

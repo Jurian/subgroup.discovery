@@ -19,8 +19,7 @@ peelCpp <- function(M, y, colTypes, alpha, minSup) {
 
 #' PRIM Validate
 #'
-#' This function iteratively goes through the steps from the peeling process
-#' and removes any trailing peels which do not improve the overall quality.
+#' This function evaluates all the steps from the peeling process on new data.
 #'
 #' @param peelSteps Peeling result from calling peel()
 #' @param M The data to peel away from

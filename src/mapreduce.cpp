@@ -1,3 +1,21 @@
+/*
+ * Subgroup Discovery
+ * Copyright (C) 2020  Jurian Baas
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 // [[Rcpp::depends(RcppParallel)]]
 
 #include <vector>
@@ -10,9 +28,6 @@
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
-
-using pCol = RMatrix<double>::Column;
-using iVec = RVector<int>;
 
 bool SubBox::isBetterThan(const SubBox& cmp) const {
 
@@ -35,11 +50,11 @@ List SubBox::toList() const {
 
 SubBox ColWorker::findNumCandidate(const int& colId) {
 
-  const pCol col = M.column(colId);
+  const RMatrix<double>::Column col = M.column(colId);
   const int N = M.nrow();
 
-  const double leftQuantile = quantile7(col, iVec(colOrders.find(colId)->second), alpha, N, masked, mask);
-  const double rightQuantile = quantile7(col, iVec(colOrders.find(colId)->second), 1-alpha, N, masked, mask);
+  const double leftQuantile = quantile7(col, RVector<int>(colOrders.find(colId)->second), alpha, N, masked, mask);
+  const double rightQuantile = quantile7(col, RVector<int>(colOrders.find(colId)->second), 1-alpha, N, masked, mask);
 
   vector<int> leftRemove, rightRemove;
   double leftMean = 0, rightMean = 0;
@@ -105,7 +120,7 @@ SubBox ColWorker::findNumCandidate(const int& colId) {
 
 SubBox ColWorker::findCatCandidate(const int& colId) {
 
-  const pCol col = M.column(colId);
+  const RMatrix<double>::Column col = M.column(colId);
   const int nCats = colCats.find(colId)->second;
   const int N = M.nrow();
 

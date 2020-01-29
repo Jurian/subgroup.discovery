@@ -22,6 +22,17 @@ Validate the results taken from the PRIM peeling process
 \details{
 This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
 }
+\examples{
+\donttest{
+  data(ames)
+  ames.sample <- sample(nrow(ames), nrow(ames) * 0.75)
+  ames <- prim.data.prepare(ames)
+  ames.model <- prim(SalePrice ~ . - PID - Order, ames[ames.sample,])
+  ames.predict <- predict(ames.model, ames[-ames.sample,])
+  plot(ames.model)
+  plot(ames.predict)
+}
+}
 \author{
 Jurian Baas
 }

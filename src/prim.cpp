@@ -1,3 +1,21 @@
+/*
+ * Subgroup Discovery
+ * Copyright (C) 2020  Jurian Baas
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 // [[Rcpp::depends(RcppParallel)]]
 
 #include <vector>
@@ -11,14 +29,7 @@ using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
 
-using dMat = RMatrix<double>;
-using dVec = RVector<double>;
-using iVec = RVector<int>;
-using iMap = map<int, int>;
-using vMap = map<int, IntegerVector>;
-using dCol = NumericMatrix::ConstColumn;
-
-IntegerVector sortIndex(const dCol& col) {
+IntegerVector sortIndex(const NumericMatrix::ConstColumn& col) {
   IntegerVector index(col.size());
   for (int i = 0 ; i != index.size() ; i++) {
     index[i] = i;
@@ -31,16 +42,16 @@ IntegerVector sortIndex(const dCol& col) {
   return index;
 }
 
-int countCategories(const dCol& col) {
+int countCategories(const NumericMatrix::ConstColumn& col) {
   return unique(col).length();
 }
 
 List findSubBoxes(
-    const dMat& M,
-    const dVec& y,
-    const iVec& colTypes,
-    const iMap& colCats,
-    const vMap& colOrders,
+    const RMatrix<double>& M,
+    const RVector<double>& y,
+    const RVector<int>& colTypes,
+    const map<int, int>& colCats,
+    const map<int, IntegerVector>& colOrders,
     const double& alpha,
     const double& minSup) {
 
@@ -103,17 +114,23 @@ List peelCpp (
     const double& alpha,
     const double& minSup) {
 
-  iMap colCats;
-  vMap colOrders;
+  map<int, int> colCats;
+  map<int, IntegerVector> colOrders;
 
+  // Pre-process the data here,
+  // for categorical columns, we need to know the number of categories
+  // and for numerical data we store the permutation which arranges the
+  // data into ascending order
   for(int i = 0; i < colTypes.length(); i++ ) {
 
     if(colTypes[i] == COL_NUMERIC) {
 
+      // We pass a reference to the column here (no copy)
       colOrders[i] = sortIndex(M(_, i));
 
     } else if(colTypes[i] == COL_CATEGORICAL) {
 
+      // We pass a reference to the column here (no copy)
       colCats[i] = countCategories(M(_, i));
 
     } else {
@@ -122,9 +139,9 @@ List peelCpp (
   }
 
   return findSubBoxes(
-    dMat(M),
-    dVec(y),
-    iVec(colTypes),
+    RMatrix<double>(M),
+    RVector<double>(y),
+    RVector<int>(colTypes),
     colCats,
     colOrders,
     alpha,
@@ -156,7 +173,7 @@ List predictCpp (
     int k = 1;
     vector<int> remove;
 
-    dCol column = M( _, colId);
+    NumericMatrix::ConstColumn column = M( _, colId);
 
     if(type == BOX_NUM_LEFT) {
 
@@ -223,7 +240,6 @@ List predictCpp (
         _["support"] = support
       )
     );
-
   }
 
   IntegerVector finalBoxIndex;
