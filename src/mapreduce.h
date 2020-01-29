@@ -20,15 +20,18 @@
 #define _MAPREDUCE_HPP
 
 // [[Rcpp::depends(RcppParallel)]]
+// [[Rcpp::depends(BH)]]
 
 #include <vector>
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
+#include <boost/dynamic_bitset.hpp>
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
+using namespace boost;
 
 static const int COL_NUMERIC = 0;
 static const int COL_CATEGORICAL = 1;
@@ -45,8 +48,10 @@ struct SubBox {
   double support;
   int type;
 
+  dynamic_bitset<> applyBox(const NumericMatrix& M) const;
   bool isBetterThan(const SubBox& cmp) const;
   List toList() const;
+  static SubBox fromList(List list);
 };
 
 struct ColWorker : public Worker {

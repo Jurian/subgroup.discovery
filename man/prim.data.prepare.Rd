@@ -13,7 +13,8 @@ prim.data.prepare(X)
 The same data frame, with only numerical and factor data
 }
 \description{
-Only numerical and factor data is allowed, this function helps prepare the data by converting logical and character columns to factor
+Only numerical and factor data is allowed, this function helps prepare the data by converting
+any columns that are not numerical or factor to factor
 }
 \examples{
 \donttest{

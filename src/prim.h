@@ -86,13 +86,19 @@ List predictCpp(
 //'
 //' @param peelSteps A list of peeling steps
 //' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
-//' @param bestBoxIndex The (zero) index of the best box
+//' @param boxId The (zero) index of the box (including)
 //' @return A list of peeling steps
 //' @author Jurian Baas
 //  [[Rcpp::export]]
-List simplifyRules(
+List simplifyCpp(
     const List& peelSteps,
     const IntegerVector& colTypes,
-    const int& bestBoxIndex);
+    const size_t& boxId);
+
+//  [[Rcpp::export]]
+IntegerVector indexCpp(
+        const List& boxes,
+        const NumericMatrix& M,
+        const size_t& boxId);
 
 #endif

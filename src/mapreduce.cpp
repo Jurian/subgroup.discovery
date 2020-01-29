@@ -17,35 +17,78 @@
  */
 
 // [[Rcpp::depends(RcppParallel)]]
+// [[Rcpp::depends(BH)]]
 
 #include <vector>
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
+#include <boost/dynamic_bitset.hpp>
 #include "quantile.h"
 #include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
+using namespace boost;
+
+dynamic_bitset<> SubBox::applyBox(const NumericMatrix& M) const {
+
+  const size_t N = M.nrow();
+  dynamic_bitset<> bs(N);
+  NumericMatrix::ConstColumn column = M( _, this->col);
+
+  if(this->type == BOX_NUM_LEFT) {
+    for(size_t i = 0; i < N; i++) {
+      if(column[i] < this->value) bs.set(i);
+    }
+  }
+
+  else if(this->type == BOX_NUM_RIGHT) {
+    for(size_t i = 0; i < N; i++) {
+      if(column[i] > this->value) bs.set(i);
+    }
+  }
+
+  else if(this->type == BOX_CATEGORY) {
+    for(size_t i = 0; i < N; i++) {
+      if(column[i] == this->value) bs.set(i);
+    }
+  }
+
+  return bs;
+}
 
 bool SubBox::isBetterThan(const SubBox& cmp) const {
 
-  bool q = quality > cmp.quality;
-  bool e = quality == cmp.quality;
-  bool s = remove.size() < cmp.remove.size();
+  bool q = this->quality > cmp.quality;
+  bool e = this->quality == cmp.quality;
+  bool s = this->remove.size() < cmp.remove.size();
 
   return q || (e && s);
 }
 
 List SubBox::toList() const {
   return List::create(
-    _["column"] = col,
-    _["type"] = type,
-    _["value"] = value,
-    _["quality"] = quality,
-    _["support"] = support
+    _["column"] = this->col,
+    _["value"] = this->value,
+    _["quality"] = this->quality,
+    _["support"] = this->support,
+    _["type"] = this->type
   );
+}
+
+SubBox SubBox::fromList(List list) {
+  vector<int> rm;
+  SubBox box = {
+    rm,
+    list["column"],
+    list["value"],
+    list["quality"],
+    list["support"],
+    list["type"]
+  };
+  return box;
 }
 
 SubBox ColWorker::findNumCandidate(const int& colId) {

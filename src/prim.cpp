@@ -17,17 +17,20 @@
  */
 
 // [[Rcpp::depends(RcppParallel)]]
+// [[Rcpp::depends(BH)]]
 
 #include <vector>
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
+#include <boost/dynamic_bitset.hpp>
 #include "prim.h"
 #include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
+using namespace boost;
 
 IntegerVector sortIndex(const NumericMatrix::ConstColumn& col) {
   IntegerVector index(col.size());
@@ -99,12 +102,7 @@ List findSubBoxes(
     finalBoxIndex.push_back(i);
   }
 
-  List peelResult = List::create();
-
-  peelResult["peels"] = peelSteps;
-  peelResult["index"] = finalBoxIndex;
-
-  return peelResult;
+  return peelSteps;
 }
 
 List peelCpp (
@@ -242,42 +240,31 @@ List predictCpp (
     );
   }
 
-  IntegerVector finalBoxIndex;
-  for(int i = 0; i < N; i++) {
-    if(mask[i]) continue;
-    finalBoxIndex.push_back(i);
-  }
-
-  List validationResult = List::create();
-
-  validationResult["peels"] = validationSteps;
-  validationResult["index"] = finalBoxIndex;
-
-  return validationResult;
-
+  return validationSteps;
 }
 
-List simplifyRules(
+List simplifyCpp(
     const List& peelSteps,
     const IntegerVector& colTypes,
-    const int& bestBoxIndex) {
+    const size_t& boxId) {
 
   List compressedBoxes = List::create();
 
-  for(int col = 0; col < colTypes.size(); col++) {
+  const size_t nCol = colTypes.size();
+  for(size_t col = 0; col < nCol; col++) {
 
-    const int colType = colTypes[col];
+    const size_t colType = colTypes[col];
     bool colUsed = false;
     List bestBoxes = List::create();
 
     if(colType == COL_NUMERIC) {
 
       // Find boxes for this column, but don't consider boxes that are worse than the best box
-      for(int boxIdx = 0; boxIdx <= bestBoxIndex; boxIdx++) {
+      for(size_t boxIdx = 0; boxIdx <= boxId; boxIdx++) {
 
         const List peel = peelSteps[boxIdx];
-        const int _col = peel["column"];
-        const int _boxType = peel["type"];
+        const size_t _col = peel["column"];
+        const size_t _boxType = peel["type"];
         const double _value = peel["value"];
 
         if(_col != col) continue;
@@ -311,10 +298,10 @@ List simplifyRules(
 
     } else if(colType == COL_CATEGORICAL) {
 
-      for(int boxIdx = 0; boxIdx <= bestBoxIndex; boxIdx++) {
+      for(size_t boxIdx = 0; boxIdx <= boxId; boxIdx++) {
 
         const List peel = peelSteps[boxIdx];
-        const int _col = peel["column"];
+        const size_t _col = peel["column"];
         if(_col != col) continue;
 
         colUsed = true;
@@ -329,6 +316,28 @@ List simplifyRules(
   return compressedBoxes;
 }
 
+IntegerVector indexCpp(
+  const List& boxes,
+  const NumericMatrix& M,
+  const size_t& boxId) {
 
+  const size_t N = M.nrow();
+
+  dynamic_bitset<> bs(N);
+
+  for(size_t i = 0; i < boxId; i++) {
+    const List boxList = boxes[i];
+    const SubBox box = SubBox::fromList(boxList);
+    bs = bs|box.applyBox(M);
+  }
+
+  IntegerVector index;
+
+  for(size_t i = 0; i < N; i++) {
+    if(!bs.test(i)) index.push_back(i);
+  }
+
+  return index;
+}
 
 

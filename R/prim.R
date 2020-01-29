@@ -39,6 +39,60 @@ prim.data.prepare <- function(X) {
   return(X)
 }
 
+
+#' @title Validate peels
+#' @description Validate the results taken from the PRIM peeling process
+#' @details This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
+#' @param object An S3 object of class prim.peel
+#' @param newdata A data frame in which to look for variables with which to predict
+#' @param box.index further arguments passed to or from other methods
+#' @return An S3 object of type prim.predict
+#' @author Jurian Baas
+#' @importFrom stats predict model.frame model.response complete.cases terms formula
+#' @export
+prim.box.index <- function(object, newdata, box.index) {
+
+  if(!(class(object) != "prim.peel" | class(object) != "prim.validate")) {
+    stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
+  }
+
+  X <- stats::model.frame(formula(stats::terms(object$formula, data = newdata, simplify = TRUE)), newdata)
+  X <- X[,-1, drop = FALSE]
+
+  # Remove rows with NA values
+  test.complete <- stats::complete.cases(X)
+  if(!all(test.complete)) {
+    warning("Incomplete cases found in data, removing...")
+    X <- X[test.complete,]
+  }
+
+  # Keep track of which columns are numerical and factors
+  col.types <- sapply(X, function(col){
+    if(is.numeric(col)) return(0)
+    if(is.factor(col)) return(1)
+    stop("Data contains invalid data types, only numeric and factors are allowed. Use prim.data.prepare() to make sure the data is properly set up.")
+  })
+
+  if(!identical(col.types, object$col.types)) stop("Columns in X differ from those in peeling result")
+  if(length(object$peels) == 0) stop("No peeling steps in provided result")
+
+  M <- X
+
+  # Turn factors into numerical
+  M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
+
+  if(missing(box.index)) {
+    box.index <- which.max(sapply(object$peels, function(peel){peel$quality}))
+  }
+
+  if(box.index > length(object$peels)) {
+    stop("Error: box.index is larger than number of peels")
+  }
+
+  indexCpp(object$peels, as.matrix(M), box.index)
+
+}
+
 #' @title Find the optimal sub-box using the PRIM peeling strategy
 #' @description By iteratively removing a small portion of the data... Note that categorical data has to be in factor form.
 #' @param formula Formula with a response and terms
@@ -105,16 +159,13 @@ prim <- function (
   # Turn factors into numerical
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
-  result <- peelCpp(
+  peel.result$peels <- peelCpp(
     M = as.matrix(M),
     y = y,
     colTypes = col.types,
     alpha = peeling.quantile,
     minSup = min.support
   )
-
-  peel.result$peels <- result[["peels"]]
-  peel.result$index <- result[["index"]]
 
   peel.result$rules <- sapply(peel.result$peels, function(peel){
     paste(
@@ -130,7 +181,7 @@ prim <- function (
   })
 
   # Many peels are redundant, we remove them here
-  peel.result$peels.simplified <- simplifyRules (
+  peel.result$peels.simplified <- simplifyCpp (
     peel.result$peels,
     peel.result$col.types,
     which.max(sapply(peel.result$peels, function(peel){peel$quality})) - 1)
@@ -219,12 +270,10 @@ predict.prim.peel <- function(object, newdata, ...) {
   # Turn factors into numerical
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
-  result <- predictCpp(object$peels, as.matrix(M), y)
-  predict.result$peels <- result[["peels"]]
-  predict.result$index <- result[["index"]]
+  predict.result$peels <- predictCpp(object$peels, as.matrix(M), y)
 
   # Many peels are redundant, we remove them here
-  predict.result$peels.simplified <- simplifyRules (
+  predict.result$peels.simplified <- simplifyCpp (
     predict.result$peels,
     predict.result$col.types,
     which.max(sapply(predict.result$peels, function(peel){peel$quality})) - 1)

@@ -33,16 +33,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// simplifyRules
-List simplifyRules(const List& peelSteps, const IntegerVector& colTypes, const int& bestBoxIndex);
-RcppExport SEXP _subgroup_discovery_simplifyRules(SEXP peelStepsSEXP, SEXP colTypesSEXP, SEXP bestBoxIndexSEXP) {
+// simplifyCpp
+List simplifyCpp(const List& peelSteps, const IntegerVector& colTypes, const size_t& boxId);
+RcppExport SEXP _subgroup_discovery_simplifyCpp(SEXP peelStepsSEXP, SEXP colTypesSEXP, SEXP boxIdSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const List& >::type peelSteps(peelStepsSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type colTypes(colTypesSEXP);
-    Rcpp::traits::input_parameter< const int& >::type bestBoxIndex(bestBoxIndexSEXP);
-    rcpp_result_gen = Rcpp::wrap(simplifyRules(peelSteps, colTypes, bestBoxIndex));
+    Rcpp::traits::input_parameter< const size_t& >::type boxId(boxIdSEXP);
+    rcpp_result_gen = Rcpp::wrap(simplifyCpp(peelSteps, colTypes, boxId));
+    return rcpp_result_gen;
+END_RCPP
+}
+// indexCpp
+IntegerVector indexCpp(const List& boxes, const NumericMatrix& M, const size_t& boxId);
+RcppExport SEXP _subgroup_discovery_indexCpp(SEXP boxesSEXP, SEXP MSEXP, SEXP boxIdSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type boxes(boxesSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type M(MSEXP);
+    Rcpp::traits::input_parameter< const size_t& >::type boxId(boxIdSEXP);
+    rcpp_result_gen = Rcpp::wrap(indexCpp(boxes, M, boxId));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -50,7 +63,8 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_subgroup_discovery_peelCpp", (DL_FUNC) &_subgroup_discovery_peelCpp, 5},
     {"_subgroup_discovery_predictCpp", (DL_FUNC) &_subgroup_discovery_predictCpp, 3},
-    {"_subgroup_discovery_simplifyRules", (DL_FUNC) &_subgroup_discovery_simplifyRules, 3},
+    {"_subgroup_discovery_simplifyCpp", (DL_FUNC) &_subgroup_discovery_simplifyCpp, 3},
+    {"_subgroup_discovery_indexCpp", (DL_FUNC) &_subgroup_discovery_indexCpp, 3},
     {NULL, NULL, 0}
 };
 

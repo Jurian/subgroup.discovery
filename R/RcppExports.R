@@ -37,10 +37,14 @@ predictCpp <- function(peelSteps, M, y) {
 #'
 #' @param peelSteps A list of peeling steps
 #' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
-#' @param bestBoxIndex The (zero) index of the best box
+#' @param boxId The (zero) index of the box (including)
 #' @return A list of peeling steps
 #' @author Jurian Baas
-simplifyRules <- function(peelSteps, colTypes, bestBoxIndex) {
-    .Call(`_subgroup_discovery_simplifyRules`, peelSteps, colTypes, bestBoxIndex)
+simplifyCpp <- function(peelSteps, colTypes, boxId) {
+    .Call(`_subgroup_discovery_simplifyCpp`, peelSteps, colTypes, boxId)
+}
+
+indexCpp <- function(boxes, M, boxId) {
+    .Call(`_subgroup_discovery_indexCpp`, boxes, M, boxId)
 }
 
