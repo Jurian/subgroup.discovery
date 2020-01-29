@@ -3,7 +3,8 @@
 #-------------------------------------------------------------------------------------------#
 
 #' @title Prepare data for PRIM
-#' @description Only numerical and factor data is allowed, this function helps prepare the data by converting logical and character columns to factor
+#' @description Only numerical and factor data is allowed, this function helps prepare the data by converting
+#' any columns that are not numerical or factor to factor
 #' @param X The data frame to prepare
 #' @return The same data frame, with only numerical and factor data
 #' @author Jurian Baas
@@ -99,11 +100,14 @@ prim <- function (
     )
   })
 
+  # Many peels are redundant, we remove them here
   peel.result$peels.simplified <- simplifyRules (
     peel.result$peels,
     peel.result$col.types,
     which.max(sapply(peel.result$peels, function(peel){peel$quality})) - 1)
 
+  # We generate a string version of the simplified rules here since we need access to the factor levels
+  # of the dataset X above
   peel.result$rules.simplified <- sapply(peel.result$peels.simplified , function(column.rules) {
 
     paste(sapply(column.rules, function(peel){
@@ -180,11 +184,14 @@ predict.prim.peel <- function(object, newdata, ...) {
   predict.result$peels <- result[["peels"]]
   predict.result$index <- result[["index"]]
 
+  # Many peels are redundant, we remove them here
   predict.result$peels.simplified <- simplifyRules (
     predict.result$peels,
     predict.result$col.types,
     which.max(sapply(predict.result$peels, function(peel){peel$quality})) - 1)
 
+  # We generate a string version of the simplified rules here since we need access to the factor levels
+  # of the dataset X above
   predict.result$rules.simplified <- sapply(predict.result$peels.simplified , function(column.rules) {
 
     paste(sapply(column.rules, function(peel){
