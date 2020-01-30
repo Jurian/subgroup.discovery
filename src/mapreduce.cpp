@@ -17,46 +17,40 @@
  */
 
 // [[Rcpp::depends(RcppParallel)]]
-// [[Rcpp::depends(BH)]]
 
 #include <vector>
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
-#include <boost/dynamic_bitset.hpp>
 #include "quantile.h"
 #include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
-using namespace boost;
 
-dynamic_bitset<> SubBox::applyBox(const NumericMatrix& M) const {
+void SubBox::applyBox(const NumericMatrix& M, bool*& mask) const {
 
   const size_t N = M.nrow();
-  dynamic_bitset<> bs(N);
   NumericMatrix::ConstColumn column = M( _, this->col);
 
   if(this->type == BOX_NUM_LEFT) {
     for(size_t i = 0; i < N; i++) {
-      if(column[i] < this->value) bs.set(i);
+      if(column[i] < this->value) mask[i] = true;
     }
   }
 
   else if(this->type == BOX_NUM_RIGHT) {
     for(size_t i = 0; i < N; i++) {
-      if(column[i] > this->value) bs.set(i);
+      if(column[i] > this->value) mask[i] = true;
     }
   }
 
   else if(this->type == BOX_CATEGORY) {
     for(size_t i = 0; i < N; i++) {
-      if(column[i] == this->value) bs.set(i);
+      if(column[i] == this->value) mask[i] = true;
     }
   }
-
-  return bs;
 }
 
 bool SubBox::isBetterThan(const SubBox& cmp) const {

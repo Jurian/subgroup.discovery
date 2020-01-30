@@ -40,15 +40,24 @@ prim.data.prepare <- function(X) {
 }
 
 
-#' @title Validate peels
-#' @description Validate the results taken from the PRIM peeling process
-#' @details This function takes the result of the prim peeling process and applies it to new data. Usually the optimal box in the peeling process is not the best on unobserved data.
-#' @param object An S3 object of class prim.peel
-#' @param newdata A data frame in which to look for variables with which to predict
-#' @param box.index further arguments passed to or from other methods
-#' @return An S3 object of type prim.predict
+#' @title Prim Box Index
+#' @description For a given box (defined as a set of peels) id, return the index of those rows that satisfy all conditions of the box
+#' @param object An S3 object of class prim.peel or prim.predict
+#' @param newdata A data frame on which to apply the conditions
+#' @param box.index Optionally, the index of the peel which defines the box. If not provided, the simplest box with the highest quality is used
+#' @return A vector of indices
 #' @author Jurian Baas
 #' @importFrom stats predict model.frame model.response complete.cases terms formula
+#' @examples
+#' \donttest{
+#'   data(pima)
+#'   pima.sample <- sample(nrow(pima), 0.75*nrow(pima))
+#'   pima <- prim.data.prepare(pima)
+#'   pima.model <- prim(class ~ ., data = pima[pima.sample,],
+#'     peeling.quantile = 0.4, min.support = 0.4)
+#'   pima.predict <- predict(pima.model, pima[-pima.sample,])
+#'   pima.idx <- prim.box.index(pima.predict, pima)
+#' }
 #' @export
 prim.box.index <- function(object, newdata, box.index) {
 

@@ -17,20 +17,17 @@
  */
 
 // [[Rcpp::depends(RcppParallel)]]
-// [[Rcpp::depends(BH)]]
 
 #include <vector>
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
-#include <boost/dynamic_bitset.hpp>
 #include "prim.h"
 #include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
-using namespace boost;
 
 IntegerVector sortIndex(const NumericMatrix::ConstColumn& col) {
   IntegerVector index(col.size());
@@ -58,7 +55,8 @@ List findSubBoxes(
     const double& alpha,
     const double& minSup) {
 
-  bool* mask = new bool[M.nrow()]{};
+  const size_t N = M.nrow();
+  bool* mask = new bool[N]{};
   int masked = 0;
 
   bool subBoxFound;
@@ -152,10 +150,9 @@ List predictCpp (
     const NumericMatrix& M,
     const NumericVector& y) {
 
-  const int N = M.nrow();
-
+  const size_t N = M.nrow();
   int masked = 0;
-  bool* mask = new bool[M.nrow()]{};
+  bool* mask = new bool[N]{};
 
   List validationSteps = List::create();
 
@@ -310,7 +307,12 @@ List simplifyCpp(
 
     }
 
-    if(colUsed) compressedBoxes.push_back(bestBoxes);
+    if(colUsed) {
+      const size_t s = bestBoxes.size();
+      for(size_t boxIdx = 0; boxIdx < s; boxIdx++) {
+        compressedBoxes.push_back(bestBoxes[boxIdx]);
+      }
+    }
   }
 
   return compressedBoxes;
@@ -322,19 +324,18 @@ IntegerVector indexCpp(
   const size_t& boxId) {
 
   const size_t N = M.nrow();
+  bool* mask = new bool[N]{};
 
-  dynamic_bitset<> bs(N);
-
-  for(size_t i = 0; i < boxId; i++) {
+  for(size_t i = 0; i <= boxId; i++) {
     const List boxList = boxes[i];
     const SubBox box = SubBox::fromList(boxList);
-    bs = bs|box.applyBox(M);
+    box.applyBox(M, mask);
   }
 
   IntegerVector index;
 
   for(size_t i = 0; i < N; i++) {
-    if(!bs.test(i)) index.push_back(i);
+    if(!mask[i]) index.push_back(i);
   }
 
   return index;
