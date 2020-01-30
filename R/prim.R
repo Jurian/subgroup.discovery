@@ -56,7 +56,20 @@ prim.box.index <- function(object, newdata, box.index) {
     stop("Supplied argument is not of class prim.peel or prim.validate, aborting...")
   }
 
-  X <- stats::model.frame(formula(stats::terms(object$formula, data = newdata, simplify = TRUE)), newdata)
+  if(!missing(box.index)) {
+    if(box.index > length(object$peels)) {
+      stop("Error: box.index is larger than number of peels")
+    }
+    if(box.index <= 0) {
+      stop("Error: box.index must be positive non-zero integer")
+    }
+  }
+
+  if(class(object) == "prim.peel") {
+    X <- stats::model.frame(formula(stats::terms(object$formula, data = newdata, simplify = TRUE)), newdata)
+  }else {
+    X <- stats::model.frame(formula(stats::terms(object$peel.result$formula, data = newdata, simplify = TRUE)), newdata)
+  }
   X <- X[,-1, drop = FALSE]
 
   # Remove rows with NA values
@@ -82,15 +95,22 @@ prim.box.index <- function(object, newdata, box.index) {
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
   if(missing(box.index)) {
-    box.index <- which.max(sapply(object$peels, function(peel){peel$quality}))
+    # Exploit the fact that since we use the simplest box with the best quality,
+    # so we can make use of the simplified rules (there are fewer of those)
+    return(indexCpp(
+      object$peels.simplified,
+      as.matrix(M),
+      length(object$peels.simplified) - 1)
+    )
+
+  } else {
+
+    return(indexCpp(
+      object$peels,
+      as.matrix(M),
+      box.index - 1)
+    )
   }
-
-  if(box.index > length(object$peels)) {
-    stop("Error: box.index is larger than number of peels")
-  }
-
-  indexCpp(object$peels, as.matrix(M), box.index)
-
 }
 
 #' @title Find the optimal sub-box using the PRIM peeling strategy
@@ -188,20 +208,17 @@ prim <- function (
 
   # We generate a string version of the simplified rules here since we need access to the factor levels
   # of the dataset X above
-  peel.result$rules.simplified <- sapply(peel.result$peels.simplified , function(column.rules) {
-
-    paste(sapply(column.rules, function(peel){
-      paste(
-        peel.result$col.names[peel$column + 1],
-        switch(peel$type + 1, "\u2265", "\u2264", "!="),
-        switch(
-          peel$type + 1,
-          peel$value,
-          peel$value,
-          levels(X[,peel$column + 1])[peel$value + 1]
-        )
+  peel.result$rules.simplified <- sapply(peel.result$peels.simplified , function(peel) {
+    paste(
+      peel.result$col.names[peel$column + 1],
+      switch(peel$type + 1, "\u2265", "\u2264", "!="),
+      switch(
+        peel$type + 1,
+        peel$value,
+        peel$value,
+        levels(X[,peel$column + 1])[peel$value + 1]
       )
-    }), collapse = " & ")
+    )
   })
 
   return(peel.result)
@@ -280,20 +297,17 @@ predict.prim.peel <- function(object, newdata, ...) {
 
   # We generate a string version of the simplified rules here since we need access to the factor levels
   # of the dataset X above
-  predict.result$rules.simplified <- sapply(predict.result$peels.simplified , function(column.rules) {
-
-    paste(sapply(column.rules, function(peel){
-      paste(
-        predict.result$col.names[peel$column + 1],
-        switch(peel$type + 1, "\u2265", "\u2264", "!="),
-        switch(
-          peel$type + 1,
-          peel$value,
-          peel$value,
-          levels(X[,peel$column + 1])[peel$value + 1]
-        )
+  predict.result$rules.simplified <- sapply(predict.result$peels.simplified , function(peel) {
+    paste(
+      predict.result$col.names[peel$column + 1],
+      switch(peel$type + 1, "\u2265", "\u2264", "!="),
+      switch(
+        peel$type + 1,
+        peel$value,
+        peel$value,
+        levels(X[,peel$column + 1])[peel$value + 1]
       )
-    }), collapse = " & ")
+    )
   })
 
   return(predict.result)
