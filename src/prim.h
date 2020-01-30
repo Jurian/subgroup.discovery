@@ -43,19 +43,6 @@ List findSubBoxes(
     const double& alpha,
     const double& minSup);
 
-
-//' PRIM Peel
-//'
-//' This function iteratively peels away a small portion of the matrix M
-//' such that the mean of the remaining values in y is maximized.
-//'
-//' @param M The data to peel away from
-//' @param y The labels to evaluate peels
-//' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
-//' @param alpha The peeling quantile
-//' @param minSup The minimum allowed size of the remainder after a peel
-//' @return A list of peeling steps
-//' @author Jurian Baas
 //  [[Rcpp::export]]
 List peelCpp(
     const NumericMatrix& M,
@@ -64,31 +51,12 @@ List peelCpp(
     const double& alpha,
     const double& minSup);
 
-//' PRIM Validate
-//'
-//' This function evaluates all the steps from the peeling process on new data.
-//'
-//' @param peelSteps Peeling result from calling peel()
-//' @param M The data to peel away from
-//' @param y The labels to evaluate peels
-//' @return A list of peeling steps
-//' @author Jurian Baas
 //  [[Rcpp::export]]
 List predictCpp(
     const List& peelSteps,
     const NumericMatrix& M,
     const NumericVector& y);
 
-//' PRIM Simplify Rules
-//'
-//' This function will go through all boxes that were found and tries to remove redundant ones,
-//' as well as grouping them by column
-//'
-//' @param peelSteps A list of peeling steps
-//' @param colTypes Indicates which columns are numeric (0) and which are categorical (1)
-//' @param boxId The (zero) index of the box (including)
-//' @return A list of peeling steps
-//' @author Jurian Baas
 //  [[Rcpp::export]]
 List simplifyCpp(
     const List& peelSteps,
