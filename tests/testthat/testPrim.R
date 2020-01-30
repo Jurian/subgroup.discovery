@@ -15,9 +15,8 @@ testthat::test_that("Test the data preparation phase", {
 
 testthat::test_that("Test functionality on pima data set", {
 
-  set.seed(1234)
   data(pima)
-  pima.sample <- sample(nrow(pima), 0.75*nrow(pima))
+  pima.sample <- 1:(0.75*nrow(pima))
   pima <- prim.data.prepare(pima)
   pima.model <- prim(class ~ ., data = pima[pima.sample,], peeling.quantile = 0.4, min.support = 0.4)
   pima.predict <- predict(pima.model, pima[-pima.sample,])
@@ -35,9 +34,8 @@ testthat::test_that("Test functionality on pima data set", {
 
 testthat::test_that("Test functionality on ames data set, with lots of categorical data", {
 
-  set.seed(1234)
   data(ames)
-  ames.sample <- sample(nrow(ames), 0.75*nrow(ames))
+  ames.sample <- 1:(0.75*nrow(ames))
   ames <- prim.data.prepare(ames)
   ames.model <- prim(SalePrice ~ . - PID - Order, data = ames[ames.sample,], peeling.quantile = 0.1, min.support = 0.1)
   ames.predict <- predict(ames.model, ames[-ames.sample,])
