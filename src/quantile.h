@@ -19,23 +19,26 @@
 #ifndef _QUANTILES_HPP
 #define _QUANTILES_HPP
 
+// [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppParallel)]]
 
 #include <Rcpp.h>
 #include <RcppParallel.h>
+#include <boost/dynamic_bitset.hpp>
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
+using namespace boost;
 
 double q(const double& gamma, const double& i, const double& j);
 
 double g(const int& n, const double& p, const double& m, const int& j);
 
-int findMaskedIndex(const int& j, const int& N, const bool* mask);
+int findMaskedIndex(const int& j, const int& N, const dynamic_bitset<>& mask);
 
-double quantile7(const RMatrix<double>::Column& col, const RVector<int>& order, const double& p, const int& N, const int& masked, const bool* mask);
+double quantile7(const RMatrix<double>::Column& col, const RVector<int>& order, const double& p, const int& N, const int& masked, const dynamic_bitset<>& mask);
 
-double quantile2(const RMatrix<double>::Column& col, const RVector<int>& order, const double& p, const int& N, const int& masked, const bool* mask);
+double quantile2(const RMatrix<double>::Column& col, const RVector<int>& order, const double& p, const int& N, const int& masked, const dynamic_bitset<>& mask);
 
 #endif
