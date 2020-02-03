@@ -296,7 +296,7 @@ predict.prim.peel <- function(object, newdata, ...) {
   # Turn factors into numerical
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
 
-  predict.result$peels <- predictCpp(object$peels, as.matrix(M), y)
+  predict.result$peels <- predictCpp(object, as.matrix(M), y)
 
   # Many peels are redundant, we remove them here
   predict.result$peels.simplified <- simplifyCpp (
