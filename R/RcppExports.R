@@ -5,8 +5,8 @@ peelCpp <- function(M, y, colTypes, alpha, minSup) {
     .Call(`_subgroup_discovery_peelCpp`, M, y, colTypes, alpha, minSup)
 }
 
-predictCpp <- function(peelSteps, M, y) {
-    .Call(`_subgroup_discovery_predictCpp`, peelSteps, M, y)
+predictCpp <- function(peelResult, M, y) {
+    .Call(`_subgroup_discovery_predictCpp`, peelResult, M, y)
 }
 
 simplifyCpp <- function(peelSteps, colTypes, boxId) {
