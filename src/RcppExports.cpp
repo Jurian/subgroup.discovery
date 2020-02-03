@@ -21,15 +21,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // predictCpp
-List predictCpp(const List& peelSteps, const NumericMatrix& M, const NumericVector& y);
-RcppExport SEXP _subgroup_discovery_predictCpp(SEXP peelStepsSEXP, SEXP MSEXP, SEXP ySEXP) {
+List predictCpp(const List& peelResult, const NumericMatrix& M, const NumericVector& y);
+RcppExport SEXP _subgroup_discovery_predictCpp(SEXP peelResultSEXP, SEXP MSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type peelSteps(peelStepsSEXP);
+    Rcpp::traits::input_parameter< const List& >::type peelResult(peelResultSEXP);
     Rcpp::traits::input_parameter< const NumericMatrix& >::type M(MSEXP);
     Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(predictCpp(peelSteps, M, y));
+    rcpp_result_gen = Rcpp::wrap(predictCpp(peelResult, M, y));
     return rcpp_result_gen;
 END_RCPP
 }
