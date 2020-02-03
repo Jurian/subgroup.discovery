@@ -5,10 +5,11 @@ Version: 0.3.0
 Authors@R: c(
           person(given = "Jurian", family = "Baas", email = "j.baas@uu.nl", role = c("aut", "cre", "cph")),
           person(given = "Ad", family ="Feelders", email = "a.j.feelders@uu.nl", role = c("ctb")))
-Description: Developed to assist in discovering interesting subgroups in high-dimensional data. The PRIM implementation is based on the 1998 paper "Bump hunting in high-dimensional data" by Jerome H. Friedman and Nicholas I. Fisher <doi:10.1023/A:1008894516817>.
-  PRIM involves finding a set of "rules" which combined imply unusually large (or small) values of some other target variable. 
+Description: Developed to assist in discovering interesting subgroups in high-dimensional data. 
+  The PRIM implementation is based on the 1998 paper "Bump hunting in high-dimensional data" by Jerome H. Friedman and Nicholas I. Fisher <doi:10.1023/A:1008894516817>.
+  PRIM involves finding a set of "rules" which combined imply unusually large values of some other target variable. 
   Specifically one tries to find a set of sub regions in which the target variable is substantially larger than overall mean. 
-  The objective of bump hunting in general is to find regions in the input (attribute/feature) space with relatively high (low) values for the target variable. 
+  The objective of bump hunting in general is to find regions in the input (attribute/feature) space with relatively high values for the target variable. 
   The regions are described by simple rules of the type if: condition-1 and ... and condition-n then: estimated target value. Given the data (or a subset of the data), 
   the goal is to produce a box B within which the target mean is as large as possible.
 Depends: R (>= 3.6.0)
@@ -21,6 +22,6 @@ BugReports: https://github.com/Jurian/subgroup.discovery/issues
 Date: 2020-01-27
 Suggests: testthat (>= 2.1.1)
 Imports: Rcpp (>= 1.0.3), RcppParallel (>= 4.4.4)
-LinkingTo: Rcpp, RcppParallel
+LinkingTo: Rcpp, RcppParallel, BH
 SystemRequirements: GNU make
 Language: en-US
