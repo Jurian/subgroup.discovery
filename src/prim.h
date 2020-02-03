@@ -53,7 +53,7 @@ List peelCpp(
 
 //  [[Rcpp::export]]
 List predictCpp(
-    const List& peelSteps,
+    const List& peelResult,
     const NumericMatrix& M,
     const NumericVector& y);
 

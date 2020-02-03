@@ -16,18 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppParallel)]]
 
 #include <vector>
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
+#include <boost/dynamic_bitset.hpp>
 #include "prim.h"
 #include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
+using namespace boost;
 
 IntegerVector sortIndex(const NumericMatrix::ConstColumn& col) {
   IntegerVector index(col.size());
@@ -56,7 +59,7 @@ List findSubBoxes(
     const double& minSup) {
 
   const size_t N = M.nrow();
-  bool* mask = new bool[N]{};
+  dynamic_bitset<> mask(N);
   int masked = 0;
 
   bool subBoxFound;
@@ -64,6 +67,8 @@ List findSubBoxes(
   List peelSteps = List::create();
 
   do {
+
+    checkUserInterrupt();
 
     ColWorker cw(
         M,
@@ -85,7 +90,7 @@ List findSubBoxes(
 
       // Add the new subbox to the mask
       for(size_t i = 0; i < bestSubBox.remove.size(); i++) {
-        mask[bestSubBox.remove[i]] = true;
+        mask.set(bestSubBox.remove[i]);
       }
 
       masked += bestSubBox.remove.size();
@@ -146,14 +151,16 @@ List peelCpp (
 }
 
 List predictCpp (
-    const List& peelSteps,
+    const List& peelResult,
     const NumericMatrix& M,
     const NumericVector& y) {
 
   const size_t N = M.nrow();
   int masked = 0;
-  bool* mask = new bool[N]{};
+  dynamic_bitset<> mask(N);
 
+  const double minSup = peelResult["min.support"];
+  const List peelSteps = peelResult["peels"];
   List validationSteps = List::create();
 
   for(List::const_iterator it = peelSteps.begin(); it != peelSteps.end(); ++it) {
@@ -182,9 +189,7 @@ List predictCpp (
           // Cumulative moving avarage of rows we keep
           quality += (y[i] - quality) / k++;
         }
-
       }
-
     } else if (type == BOX_NUM_RIGHT) {
 
       for(int i = 0; i < column.size(); i++) {
@@ -197,9 +202,7 @@ List predictCpp (
           // Cumulative moving avarage of rows we keep
           quality += (y[i] - quality) / k++;
         }
-
       }
-
     } else if (type == BOX_CATEGORY) {
 
       for(int i = 0; i < column.size(); i++) {
@@ -212,19 +215,21 @@ List predictCpp (
           // Cumulative moving avarage of rows we keep
           quality += (y[i] - quality) / k++;
         }
-
       }
-
     }
+
+    // In this phase the box might drop under the minimum support
+    masked += remove.size();
+    const int keepCount = N - masked;
+    const double support = keepCount / (double)N;
+
+    // We have dropped under the minimum support
+    if(support < minSup) break;
 
     // Add the new subbox to the mask
     for(size_t i = 0; i < remove.size(); i++) {
-      mask[remove[i]] = true;
+      mask.set(remove[i]);
     }
-    masked += remove.size();
-
-    const int keepCount = N - masked;
-    const double support = keepCount / (double)N;
 
     validationSteps.push_back(
       List::create(
@@ -324,9 +329,12 @@ IntegerVector indexCpp(
   const size_t& boxId) {
 
   const size_t N = M.nrow();
-  bool* mask = new bool[N]{};
+  dynamic_bitset<> mask(N);
 
   for(size_t i = 0; i <= boxId; i++) {
+
+    checkUserInterrupt();
+
     const List boxList = boxes[i];
     const SubBox box = SubBox::fromList(boxList);
     box.applyBox(M, mask);
