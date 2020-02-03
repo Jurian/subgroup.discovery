@@ -16,39 +16,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppParallel)]]
 
 #include <vector>
 #include <map>
 #include <Rcpp.h>
 #include <RcppParallel.h>
+#include <boost/dynamic_bitset.hpp>
 #include "quantile.h"
 #include "mapreduce.h"
 
 using namespace RcppParallel;
 using namespace Rcpp;
 using namespace std;
+using namespace boost;
 
-void SubBox::applyBox(const NumericMatrix& M, bool*& mask) const {
+void SubBox::applyBox(const NumericMatrix& M, dynamic_bitset<>& mask) const {
 
   const size_t N = M.nrow();
-  NumericMatrix::ConstColumn column = M( _, this->col);
+  NumericMatrix::ConstColumn column = M(_, this->col);
 
   if(this->type == BOX_NUM_LEFT) {
     for(size_t i = 0; i < N; i++) {
-      if(column[i] < this->value) mask[i] = true;
+      if(column[i] < this->value) mask.set(i);
     }
   }
 
   else if(this->type == BOX_NUM_RIGHT) {
     for(size_t i = 0; i < N; i++) {
-      if(column[i] > this->value) mask[i] = true;
+      if(column[i] > this->value) mask.set(i);
     }
   }
 
   else if(this->type == BOX_CATEGORY) {
     for(size_t i = 0; i < N; i++) {
-      if(column[i] == this->value) mask[i] = true;
+      if(column[i] == this->value) mask.set(i);
     }
   }
 }
@@ -218,7 +221,7 @@ void ColWorker::operator()(size_t begin, size_t end) {
   for(size_t i = begin; i < end; i++) {
 
     try {
-      //Rcout << i;
+
       if(colTypes[i] == COL_NUMERIC) {
         newSubBox = findNumCandidate(i);
       }
