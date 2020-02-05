@@ -1,7 +1,7 @@
 Package: subgroup.discovery
 Type: Package
 Title: Subgroup Discovery and Bump Hunting
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: c(
           person(given = "Jurian", family = "Baas", email = "j.baas@uu.nl", role = c("aut", "cre", "cph")),
           person(given = "Ad", family ="Feelders", email = "a.j.feelders@uu.nl", role = c("ctb")))
