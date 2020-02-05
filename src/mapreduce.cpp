@@ -125,6 +125,7 @@ SubBox ColWorker::findNumCandidate(const int& colId) {
   const int rightRemoveCount = rightRemove.size();
   const int rightKeepCount = N - masked - rightRemove.size();
 
+  // Create empty invalid boxes for both left and right
   SubBox left = {
     colId,
     BOX_NUM_LEFT
@@ -153,6 +154,7 @@ SubBox ColWorker::findNumCandidate(const int& colId) {
     right.remove = rightRemove;
   }
 
+  // Note that we might still return an invalid box here
   return left.isBetterThan(right) ? left : right;
 }
 
@@ -162,6 +164,7 @@ SubBox ColWorker::findCatCandidate(const int& colId) {
   const int nCats = colCats.find(colId)->second;
   const int N = M.nrow();
 
+  // Create a default invalid box
   SubBox box = {
     colId,
     BOX_CATEGORY
@@ -212,20 +215,23 @@ SubBox ColWorker::findCatCandidate(const int& colId) {
     }
   }
 
+  // Note that we might still return an invalid box here
   return box;
 }
 
 void ColWorker::operator()(size_t begin, size_t end) {
 
-
+  // We start with an invalid default box
   for(size_t i = begin; i < end; i++) {
 
     if(colTypes[i] == COL_NUMERIC) {
 
       SubBox newSubBox = findNumCandidate(i);
 
-      if(newSubBox.valid && newSubBox.isBetterThan(bestSubBox)) {
-        bestSubBox = newSubBox;
+      // At this point the new box might be invalid!
+      // Note that a valid box is always "better" than an invalid box
+      if(newSubBox.valid && newSubBox.isBetterThan(this->bestSubBox)) {
+        this->bestSubBox = newSubBox;
         subBoxFound = true;
       }
 
@@ -233,8 +239,10 @@ void ColWorker::operator()(size_t begin, size_t end) {
 
       SubBox newSubBox = findCatCandidate(i);
 
-      if(newSubBox.valid && newSubBox.isBetterThan(bestSubBox)) {
-        bestSubBox = newSubBox;
+      // At this point the new box might be invalid!
+      // Note that a valid box is always "better" than an invalid box
+      if(newSubBox.valid && newSubBox.isBetterThan(this->bestSubBox)) {
+        this->bestSubBox = newSubBox;
         subBoxFound = true;
       }
     }
@@ -242,9 +250,9 @@ void ColWorker::operator()(size_t begin, size_t end) {
 }
 
 void ColWorker::join(const ColWorker& cw) {
-
-  if(cw.subBoxFound && (!subBoxFound || cw.bestSubBox.isBetterThan(bestSubBox))) {
-    bestSubBox = cw.bestSubBox;
-    subBoxFound = true;
+  // Note that a valid box is always "better" than an invalid box
+  if(cw.subBoxFound && (!this->subBoxFound || cw.bestSubBox.isBetterThan(this->bestSubBox))) {
+    this->bestSubBox = cw.bestSubBox;
+    this->subBoxFound = true;
   }
 }
