@@ -28,10 +28,7 @@
 #include <RcppParallel.h>
 #include <boost/dynamic_bitset.hpp>
 
-using namespace RcppParallel;
 using namespace Rcpp;
-using namespace std;
-using namespace boost;
 
 static const int COL_NUMERIC = 0;
 static const int COL_CATEGORICAL = 1;
@@ -41,45 +38,74 @@ static const int BOX_NUM_RIGHT = 1;
 static const int BOX_CATEGORY = 2;
 
 struct SubBox {
-  vector<int> remove;
+
+  bool valid;
   int col;
+  int type;
   double value;
   double quality;
   double support;
-  int type;
+  std::vector<int> remove;
 
-  void applyBox(const NumericMatrix& M, dynamic_bitset<>& mask) const;
+  SubBox(
+    int col,
+    int type)
+  : valid(false),
+    col(col),
+    type(type),
+    value(0),
+    quality(0),
+    support(0),
+    remove(std::vector<int>()) {};
+
+  SubBox(
+    bool valid,
+    int col,
+    int type,
+    double value,
+    double quality,
+    double support,
+    std::vector<int> remove)
+    : valid(valid),
+      col(col),
+      type(type),
+      value(value),
+      quality(quality),
+      support(support),
+      remove(remove) {};
+
+  void applyBox(const NumericMatrix& M, boost::dynamic_bitset<>& mask) const;
   bool isBetterThan(const SubBox& cmp) const;
   List toList() const;
   static SubBox fromList(List list);
 };
 
-struct ColWorker : public Worker {
+struct ColWorker : public RcppParallel::Worker {
 
-  const RMatrix<double>& M;
-  const RVector<double>& y;
-  const RVector<int>& colTypes;
-  const map<int, int>& colCats;
-  const map<int, IntegerVector>& colOrders;
+  const RcppParallel::RMatrix<double>& M;
+  const RcppParallel::RVector<double>& y;
+  const RcppParallel::RVector<int>& colTypes;
+  const std::map<int, int>& colCats;
+  const std::map<int, IntegerVector>& colOrders;
   const double& alpha;
   const double& minSup;
   const int& masked;
-  const dynamic_bitset<>& mask;
+  const boost::dynamic_bitset<>& mask;
 
   bool subBoxFound;
-  SubBox bestSubBox;
+  SubBox bestSubBox = {0,0};
 
   // constructors
   ColWorker (
-      const RMatrix<double>& M,
-      const RVector<double>& y,
-      const RVector<int>& colTypes,
-      const map<int, int>& colCats,
-      const map<int, IntegerVector>& colOrders,
+      const RcppParallel::RMatrix<double>& M,
+      const RcppParallel::RVector<double>& y,
+      const RcppParallel::RVector<int>& colTypes,
+      const std::map<int, int>& colCats,
+      const std::map<int, IntegerVector>& colOrders,
       const double& alpha,
       const double& minSup,
       const int& masked,
-      const dynamic_bitset<>& mask)
+      const boost::dynamic_bitset<>& mask)
     : M(M),
       y(y),
       colTypes(colTypes),

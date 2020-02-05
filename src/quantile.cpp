@@ -24,10 +24,7 @@
 #include <boost/dynamic_bitset.hpp>
 #include "quantile.h"
 
-using namespace RcppParallel;
 using namespace Rcpp;
-using namespace std;
-using namespace boost;
 
 double q(const double& gamma, const double& i, const double& j) {
   return (1 - gamma) * i + gamma * j;
@@ -37,7 +34,7 @@ double g(const int& n, const double& p, const double& m, const int& j) {
   return n * p + m - j;
 }
 
-int findMaskedIndex(const int& j, const int& N, const dynamic_bitset<>& mask) {
+int findMaskedIndex(const int& j, const int& N, const boost::dynamic_bitset<>& mask) {
   int k = 0;
   for(int i = 0; i < N; i++) {
     if(!mask[i]) k++;
@@ -46,8 +43,8 @@ int findMaskedIndex(const int& j, const int& N, const dynamic_bitset<>& mask) {
   throw 0;
 }
 
-double quantile7 (const RMatrix<double>::Column& col, const RVector<int>& order, const double& p,
-                  const int& N,const int& masked, const dynamic_bitset<>& mask) {
+double quantile7 (const RcppParallel::RMatrix<double>::Column& col, const RcppParallel::RVector<int>& order, const double& p,
+                  const int& N, const int& masked, const boost::dynamic_bitset<>& mask) {
 
   const int n = N - masked;
 
@@ -60,8 +57,8 @@ double quantile7 (const RMatrix<double>::Column& col, const RVector<int>& order,
 }
 
 
-double quantile2 (const RMatrix<double>::Column& col, const RVector<int>& order, const double& p,
-                  const int& N, const int& masked, const dynamic_bitset<>& mask) {
+double quantile2 (const RcppParallel::RMatrix<double>::Column& col, const RcppParallel::RVector<int>& order, const double& p,
+                  const int& N, const int& masked, const boost::dynamic_bitset<>& mask) {
 
   // m is a constant determined by quantile type
   const double m = 0;

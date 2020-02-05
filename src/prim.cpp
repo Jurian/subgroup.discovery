@@ -27,17 +27,14 @@
 #include "prim.h"
 #include "mapreduce.h"
 
-using namespace RcppParallel;
 using namespace Rcpp;
-using namespace std;
-using namespace boost;
 
 IntegerVector sortIndex(const NumericMatrix::ConstColumn& col) {
   IntegerVector index(col.size());
   for (int i = 0 ; i != index.size() ; i++) {
     index[i] = i;
   }
-  sort(index.begin(), index.end(),
+  std::sort(index.begin(), index.end(),
        [&](const int& a, const int& b) {
          return (col[a] < col[b]);
        }
@@ -50,16 +47,16 @@ int countCategories(const NumericMatrix::ConstColumn& col) {
 }
 
 List findSubBoxes(
-    const RMatrix<double>& M,
-    const RVector<double>& y,
-    const RVector<int>& colTypes,
-    const map<int, int>& colCats,
-    const map<int, IntegerVector>& colOrders,
+    const RcppParallel::RMatrix<double>& M,
+    const RcppParallel::RVector<double>& y,
+    const RcppParallel::RVector<int>& colTypes,
+    const std::map<int, int>& colCats,
+    const std::map<int, IntegerVector>& colOrders,
     const double& alpha,
     const double& minSup) {
 
   const size_t N = M.nrow();
-  dynamic_bitset<> mask(N);
+  boost::dynamic_bitset<> mask(N);
   int masked = 0;
 
   bool subBoxFound;
@@ -81,7 +78,7 @@ List findSubBoxes(
         masked,
         mask);
 
-    parallelReduce(0, M.ncol(), cw);
+    RcppParallel::parallelReduce(0, M.ncol(), cw);
 
     subBoxFound = cw.subBoxFound;
 
@@ -115,8 +112,8 @@ List peelCpp (
     const double& alpha,
     const double& minSup) {
 
-  map<int, int> colCats;
-  map<int, IntegerVector> colOrders;
+  std::map<int, int> colCats;
+  std::map<int, IntegerVector> colOrders;
 
   // Pre-process the data here,
   // for categorical columns, we need to know the number of categories
@@ -140,9 +137,9 @@ List peelCpp (
   }
 
   return findSubBoxes(
-    RMatrix<double>(M),
-    RVector<double>(y),
-    RVector<int>(colTypes),
+    RcppParallel::RMatrix<double>(M),
+    RcppParallel::RVector<double>(y),
+    RcppParallel::RVector<int>(colTypes),
     colCats,
     colOrders,
     alpha,
@@ -157,7 +154,7 @@ List predictCpp (
 
   const size_t N = M.nrow();
   int masked = 0;
-  dynamic_bitset<> mask(N);
+  boost::dynamic_bitset<> mask(N);
 
   const double minSup = peelResult["min.support"];
   const List peelSteps = peelResult["peels"];
@@ -173,7 +170,7 @@ List predictCpp (
     double quality = 0;
 
     int k = 1;
-    vector<int> remove;
+    std::vector<int> remove;
 
     NumericMatrix::ConstColumn column = M( _, colId);
 
@@ -237,7 +234,8 @@ List predictCpp (
         _["type"] = type,
         _["value"] = value,
         _["quality"] = quality,
-        _["support"] = support
+        _["support"] = support,
+        _["valid"] = true
       )
     );
   }
@@ -329,7 +327,7 @@ IntegerVector indexCpp(
   const size_t& boxId) {
 
   const size_t N = M.nrow();
-  dynamic_bitset<> mask(N);
+  boost::dynamic_bitset<> mask(N);
 
   for(size_t i = 0; i <= boxId; i++) {
 

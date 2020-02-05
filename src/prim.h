@@ -27,19 +27,17 @@
 #include <RcppParallel.h>
 #include "mapreduce.h"
 
-using namespace RcppParallel;
 using namespace Rcpp;
-using namespace std;
 
 IntegerVector sortIndex(const NumericMatrix::ConstColumn& col);
 int countCategories(const NumericMatrix::ConstColumn& col);
 
 List findSubBoxes(
-    const RMatrix<double>& M,
-    const RVector<double>& y,
-    const RVector<int>& colTypes,
-    const map<int, int>& colCats,
-    const map<int, IntegerVector>& colOrders,
+    const RcppParallel::RMatrix<double>& M,
+    const RcppParallel::RVector<double>& y,
+    const RcppParallel::RVector<int>& colTypes,
+    const std::map<int, int>& colCats,
+    const std::map<int, IntegerVector>& colOrders,
     const double& alpha,
     const double& minSup);
 
