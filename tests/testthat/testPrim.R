@@ -16,7 +16,7 @@ testthat::test_that("Test the data preparation phase", {
 testthat::test_that("Test functionality on pima data set", {
 
   data(pima)
-  pima.sample <- 1:(0.75*nrow(pima))
+  pima.sample <- sample(nrow(pima), 0.75*nrow(pima))#1:(0.75*nrow(pima))
   pima <- prim.data.prepare(pima)
   pima.model <- prim(class ~ ., data = pima[pima.sample,], peeling.quantile = 0.4, min.support = 0.4)
   pima.predict <- predict(pima.model, pima[-pima.sample,])
@@ -29,13 +29,12 @@ testthat::test_that("Test functionality on pima data set", {
 
   expect_true(length(pima.model.idx) > 0)
   expect_true(length(pima.predict.idx) > 0)
-  expect_true(length(pima.model.idx) <= length(pima.predict.idx))
 })
 
 testthat::test_that("Test functionality on ames data set, with lots of categorical data", {
 
   data(ames)
-  ames.sample <- 1:(0.75*nrow(ames))
+  ames.sample <- sample(nrow(ames), 0.75*nrow(ames))#1:(0.75*nrow(ames))
   ames <- prim.data.prepare(ames)
   ames.model <- prim(SalePrice ~ . - PID - Order, data = ames[ames.sample,], peeling.quantile = 0.1, min.support = 0.1)
   ames.predict <- predict(ames.model, ames[-ames.sample,])
@@ -48,5 +47,4 @@ testthat::test_that("Test functionality on ames data set, with lots of categoric
 
   expect_true(length(ames.model.idx) > 0)
   expect_true(length(ames.predict.idx) > 0)
-  expect_true(length(ames.model.idx) <= length(ames.predict.idx))
 })
