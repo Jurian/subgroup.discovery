@@ -12,9 +12,9 @@ The objective of bump hunting in general is to find regions in the input (attrib
 
 ## Contributors
 
-Developed by Jurian Baas, part of master thesis in Artificial Intelligence.
+Developed by Jurian Baas, Utrecht University, Department of Information and Computing Sciences. Originally created as part of master thesis in artificial intelligence.
 
-Special thanks for contributions such as suggestions and bug-fixing to Dr. A.J. Feelders, Utrecht University, Department of Information and Computing Sciences
+Special thanks for contributions such as suggestions and bug-fixing to Dr. A.J. Feelders, Utrecht University, Department of Information and Computing Sciences.
 
 ## References
 
