@@ -37,7 +37,7 @@ static const int BOX_NUM_LEFT = 0;
 static const int BOX_NUM_RIGHT = 1;
 static const int BOX_CATEGORY = 2;
 
-struct SubBox {
+struct Peel {
 
   bool valid;
   int col;
@@ -47,7 +47,16 @@ struct SubBox {
   double support;
   std::vector<int> remove;
 
-  SubBox(
+  Peel()
+  : valid(false),
+    col(0),
+    type(0),
+    value(0),
+    quality(0),
+    support(0),
+    remove(std::vector<int>()) {};
+
+  Peel(
     int col,
     int type)
   : valid(false),
@@ -58,7 +67,7 @@ struct SubBox {
     support(0),
     remove(std::vector<int>()) {};
 
-  SubBox(
+  Peel(
     bool valid,
     int col,
     int type,
@@ -66,18 +75,18 @@ struct SubBox {
     double quality,
     double support,
     std::vector<int> remove)
-    : valid(valid),
-      col(col),
-      type(type),
-      value(value),
-      quality(quality),
-      support(support),
-      remove(remove) {};
+  : valid(valid),
+    col(col),
+    type(type),
+    value(value),
+    quality(quality),
+    support(support),
+    remove(remove) {};
 
-  void applyBox(const NumericMatrix& M, boost::dynamic_bitset<>& mask) const;
-  bool isBetterThan(const SubBox& cmp) const;
+  void apply(const NumericMatrix& M, boost::dynamic_bitset<>& mask) const;
+  bool isBetterThan(const Peel& cmp) const;
   List toList() const;
-  static SubBox fromList(List list);
+  static Peel fromList(List list);
 };
 
 struct ColWorker : public RcppParallel::Worker {
@@ -92,8 +101,7 @@ struct ColWorker : public RcppParallel::Worker {
   const int& masked;
   const boost::dynamic_bitset<>& mask;
 
-  bool subBoxFound;
-  SubBox bestSubBox = {0,0};
+  Peel bestPeel = {};
 
   // constructors
   ColWorker (
@@ -114,8 +122,7 @@ struct ColWorker : public RcppParallel::Worker {
       alpha(alpha),
       minSup(minSup),
       masked(masked),
-      mask(mask),
-      subBoxFound(false) {};
+      mask(mask) {};
 
   ColWorker(const ColWorker& cw, RcppParallel::Split)
     : M(cw.M),
@@ -127,13 +134,12 @@ struct ColWorker : public RcppParallel::Worker {
       minSup(cw.minSup),
       masked(cw.masked),
       mask(cw.mask),
-      subBoxFound(cw.subBoxFound),
-      bestSubBox(cw.bestSubBox) {};
+      bestPeel(cw.bestPeel) {};
 
   void operator()(size_t begin, size_t end);
   void join(const ColWorker& cw);
-  SubBox findNumCandidate(const int& colId);
-  SubBox findCatCandidate(const int& colId);
+  Peel findNumCandidate(const int& colId);
+  Peel findCatCandidate(const int& colId);
 };
 
 #endif

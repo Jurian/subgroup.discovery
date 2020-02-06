@@ -46,7 +46,7 @@ int countCategories(const NumericMatrix::ConstColumn& col) {
   return unique(col).length();
 }
 
-List findSubBoxes(
+List findPeels(
     const RcppParallel::RMatrix<double>& M,
     const RcppParallel::RVector<double>& y,
     const RcppParallel::RVector<int>& colTypes,
@@ -59,7 +59,7 @@ List findSubBoxes(
   boost::dynamic_bitset<> mask(N);
   int masked = 0;
 
-  bool subBoxFound;
+  bool peelFound;
 
   List peelSteps = List::create();
 
@@ -80,21 +80,22 @@ List findSubBoxes(
 
     RcppParallel::parallelReduce(0, M.ncol(), cw);
 
-    subBoxFound = cw.subBoxFound;
+    // If nothing valid was found, the peel returned is invalid
+    peelFound = cw.bestPeel.valid;
 
-    if(subBoxFound) {
-      SubBox bestSubBox = cw.bestSubBox;
+    if(peelFound) {
+      Peel bestPeel = cw.bestPeel;
 
-      // Add the new subbox to the mask
-      for(size_t i = 0; i < bestSubBox.remove.size(); i++) {
-        mask.set(bestSubBox.remove[i]);
+      // Add the new peel to the mask
+      for(size_t i = 0; i < bestPeel.remove.size(); i++) {
+        mask.set(bestPeel.remove[i]);
       }
 
-      masked += bestSubBox.remove.size();
-      peelSteps.push_back(bestSubBox.toList());
+      masked += bestPeel.remove.size();
+      peelSteps.push_back(bestPeel.toList());
     }
 
-  } while (subBoxFound);
+  } while (peelFound);
 
   IntegerVector finalBoxIndex;
   for(size_t i = 0; i < M.nrow(); i++) {
@@ -136,7 +137,7 @@ List peelCpp (
     }
   }
 
-  return findSubBoxes(
+  return findPeels(
     RcppParallel::RMatrix<double>(M),
     RcppParallel::RVector<double>(y),
     RcppParallel::RVector<int>(colTypes),
@@ -223,7 +224,7 @@ List predictCpp (
     // We have dropped under the minimum support
     if(support < minSup) break;
 
-    // Add the new subbox to the mask
+    // Add the new peel to the mask
     for(size_t i = 0; i < remove.size(); i++) {
       mask.set(remove[i]);
     }
@@ -255,7 +256,7 @@ List simplifyCpp(
 
     const size_t colType = colTypes[col];
     bool colUsed = false;
-    List bestBoxes = List::create();
+    List bestPeels = List::create();
 
     if(colType == COL_NUMERIC) {
 
@@ -272,26 +273,26 @@ List simplifyCpp(
 
         if(_boxType == BOX_NUM_LEFT) {
 
-          if(bestBoxes.containsElementNamed("left")) {
-            const List curBest = bestBoxes["left"];
+          if(bestPeels.containsElementNamed("left")) {
+            const List curBest = bestPeels["left"];
             const double value = curBest["value"];
             if(_value > value) {
-              bestBoxes["left"] = peel;
+              bestPeels["left"] = peel;
             }
           } else {
-            bestBoxes["left"] = peel;
+            bestPeels["left"] = peel;
           }
 
         } else if (_boxType == BOX_NUM_RIGHT) {
 
-          if(bestBoxes.containsElementNamed("right")) {
-            const List curBest = bestBoxes["right"];
+          if(bestPeels.containsElementNamed("right")) {
+            const List curBest = bestPeels["right"];
             const double value = curBest["value"];
             if(_value < value) {
-              bestBoxes["right"] = peel;
+              bestPeels["right"] = peel;
             }
           } else {
-            bestBoxes["right"] = peel;
+            bestPeels["right"] = peel;
           }
         }
       }
@@ -305,15 +306,15 @@ List simplifyCpp(
         if(_col != col) continue;
 
         colUsed = true;
-        bestBoxes.push_back(peel);
+        bestPeels.push_back(peel);
       }
 
     }
 
     if(colUsed) {
-      const size_t s = bestBoxes.size();
+      const size_t s = bestPeels.size();
       for(size_t boxIdx = 0; boxIdx < s; boxIdx++) {
-        compressedBoxes.push_back(bestBoxes[boxIdx]);
+        compressedBoxes.push_back(bestPeels[boxIdx]);
       }
     }
   }
@@ -333,9 +334,9 @@ IntegerVector indexCpp(
 
     checkUserInterrupt();
 
-    const List boxList = boxes[i];
-    const SubBox box = SubBox::fromList(boxList);
-    box.applyBox(M, mask);
+    const List peels = boxes[i];
+    const Peel peel = Peel::fromList(peels);
+    peel.apply(M, mask);
   }
 
   IntegerVector index;

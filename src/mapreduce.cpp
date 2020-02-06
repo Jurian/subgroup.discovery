@@ -28,7 +28,7 @@
 
 using namespace Rcpp;
 
-void SubBox::applyBox(const NumericMatrix& M, boost::dynamic_bitset<>& mask) const {
+void Peel::apply(const NumericMatrix& M, boost::dynamic_bitset<>& mask) const {
 
   const size_t N = M.nrow();
   NumericMatrix::ConstColumn column = M(_, this->col);
@@ -52,7 +52,13 @@ void SubBox::applyBox(const NumericMatrix& M, boost::dynamic_bitset<>& mask) con
   }
 }
 
-bool SubBox::isBetterThan(const SubBox& cmp) const {
+bool Peel::isBetterThan(const Peel& cmp) const {
+
+  // When we choose between two peels we always choose
+  // a valid one over an invalid one. If both are invalid,
+  // then the peel is not "better".
+  // If both are valid, choose the peel with the highest
+  // quality and break ties on support
 
   if(this->valid && !cmp.valid) return true;
   if(!this->valid && cmp.valid) return false;
@@ -65,7 +71,7 @@ bool SubBox::isBetterThan(const SubBox& cmp) const {
   return q || (e && s);
 }
 
-List SubBox::toList() const {
+List Peel::toList() const {
   return List::create(
     _["column"] = this->col,
     _["value"] = this->value,
@@ -76,9 +82,9 @@ List SubBox::toList() const {
   );
 }
 
-SubBox SubBox::fromList(List list) {
+Peel Peel::fromList(List list) {
 
-  SubBox box = {
+  Peel box = {
     (bool)list["valid"],
     (int)list["column"],
     (int)list["type"],
@@ -90,7 +96,7 @@ SubBox SubBox::fromList(List list) {
   return box;
 }
 
-SubBox ColWorker::findNumCandidate(const int& colId) {
+Peel ColWorker::findNumCandidate(const int& colId) {
 
   const RcppParallel::RMatrix<double>::Column col = M.column(colId);
   const int N = M.nrow();
@@ -126,12 +132,12 @@ SubBox ColWorker::findNumCandidate(const int& colId) {
   const int rightKeepCount = N - masked - rightRemove.size();
 
   // Create empty invalid boxes for both left and right
-  SubBox left = {
+  Peel left = {
     colId,
     BOX_NUM_LEFT
   };
 
-  SubBox right = {
+  Peel right = {
     colId,
     BOX_NUM_RIGHT
   };
@@ -158,14 +164,14 @@ SubBox ColWorker::findNumCandidate(const int& colId) {
   return left.isBetterThan(right) ? left : right;
 }
 
-SubBox ColWorker::findCatCandidate(const int& colId) {
+Peel ColWorker::findCatCandidate(const int& colId) {
 
   const RcppParallel::RMatrix<double>::Column col = M.column(colId);
   const int nCats = colCats.find(colId)->second;
   const int N = M.nrow();
 
   // Create a default invalid box
-  SubBox box = {
+  Peel box = {
     colId,
     BOX_CATEGORY
   };
@@ -226,24 +232,22 @@ void ColWorker::operator()(size_t begin, size_t end) {
 
     if(colTypes[i] == COL_NUMERIC) {
 
-      SubBox newSubBox = findNumCandidate(i);
+      Peel newPeel = findNumCandidate(i);
 
       // At this point the new box might be invalid!
       // Note that a valid box is always "better" than an invalid box
-      if(newSubBox.valid && newSubBox.isBetterThan(this->bestSubBox)) {
-        this->bestSubBox = newSubBox;
-        subBoxFound = true;
+      if(newPeel.valid && newPeel.isBetterThan(this->bestPeel)) {
+        this->bestPeel = newPeel;
       }
 
     } else {
 
-      SubBox newSubBox = findCatCandidate(i);
+      Peel newPeel = findCatCandidate(i);
 
       // At this point the new box might be invalid!
       // Note that a valid box is always "better" than an invalid box
-      if(newSubBox.valid && newSubBox.isBetterThan(this->bestSubBox)) {
-        this->bestSubBox = newSubBox;
-        subBoxFound = true;
+      if(newPeel.valid && newPeel.isBetterThan(this->bestPeel)) {
+        this->bestPeel = newPeel;
       }
     }
   }
@@ -251,8 +255,7 @@ void ColWorker::operator()(size_t begin, size_t end) {
 
 void ColWorker::join(const ColWorker& cw) {
   // Note that a valid box is always "better" than an invalid box
-  if(cw.subBoxFound && (!this->subBoxFound || cw.bestSubBox.isBetterThan(this->bestSubBox))) {
-    this->bestSubBox = cw.bestSubBox;
-    this->subBoxFound = true;
+  if(cw.bestPeel.isBetterThan(this->bestPeel)) {
+    this->bestPeel = cw.bestPeel;
   }
 }

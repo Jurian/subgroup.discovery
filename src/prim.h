@@ -32,7 +32,7 @@ using namespace Rcpp;
 IntegerVector sortIndex(const NumericMatrix::ConstColumn& col);
 int countCategories(const NumericMatrix::ConstColumn& col);
 
-List findSubBoxes(
+List findPeels(
     const RcppParallel::RMatrix<double>& M,
     const RcppParallel::RVector<double>& y,
     const RcppParallel::RVector<int>& colTypes,
