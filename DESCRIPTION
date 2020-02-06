@@ -23,5 +23,5 @@ Date: 2020-01-27
 Suggests: testthat (>= 2.1.1)
 Imports: Rcpp (>= 1.0.3), RcppParallel (>= 4.4.4)
 LinkingTo: Rcpp, RcppParallel, BH
-SystemRequirements: GNU make
+SystemRequirements: GNU make, C++11
 Language: en-US
