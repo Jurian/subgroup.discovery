@@ -8,13 +8,19 @@
 
 0 errors | 0 warnings | 0 notes
 
-* This is an update for the previous CRAN release and is not backwards compatible
+## Notes
 
-* The note is due to the use of GNU make, which is requried by RcppParallel. As far as I know, this cannot be remedied and is otherwise    not an issue. Please see https://github.com/RcppCore/RcppParallel/issues/23 for why
+## Version 0.3
 
-* Sadly, the package fails on Debian Linux, R-devel, GCC ASAN/UBSAN. This seems to be an issue that is caused by TBB which is used by      RcppParallel (a dependency of this package). According to this issue https://github.com/RcppCore/RcppParallel/issues/36 there is         currently no workaround, as the TBB team has to fix this. Since RcppParallel has this issue too and has been accepted to CRAN, I think   the error can be ignored for this package as well.
+* This is a major update for release 0.2.x and is not backwards compatible
 
-* Before this package had trouble building on Solaris. Therefore this package has been checked using rhub::check_on_solaris(), Oracle Solaris 10, x86, 32 bit, R-patched (experimental). This gave 0 errors, 0 warnings and 0 notes. 
+* The note is due to the use of GNU make, which is requried by RcppParallel. As far as I know, this cannot be remedied and is otherwise not an issue. Please see https://github.com/RcppCore/RcppParallel/issues/23.
+
+## Version 0.3.2
+
+* The minimal R version has been set to 3.0.0, so this package can also be tested on some architectures on CRAN which use an older version
+
+* The issue with ASAN / UBSAN warnings in CRAN submissions should be resolved thanks to update 5.0.0 from RcppParallel package
 
 ## Reverse dependencies
 

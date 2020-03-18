@@ -18,3 +18,11 @@ Changes:
 * Removed all namespaces except Rcpp to comply with best practices (especially not using std)
 * Changed the pattern of sub-box creation so at no point there is a uninstantiated value
 
+
+subgroup.discovery v0.3.2 (Release date: 2020-03-18)
+==============
+
+Changes:
+
+* The minimal R version has been set to 3.0.0, so this package can also be tested on some architectures on CRAN which use an older version
+* The issue with ASAN / UBSAN warnings in CRAN submissions should be resolved thanks to update 5.0.0 from RcppParallel package

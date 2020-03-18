@@ -1,6 +1,8 @@
 library(subgroup.discovery)
 context("Patient Rule Induction Method")
 
+# To avoid ASAN / UBSAN warnings in future CRAN submissions:
+Sys.setenv(RCPP_PARALLEL_BACKEND = "tinythread")
 
 testthat::test_that("Test the data preparation phase", {
 
