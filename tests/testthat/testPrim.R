@@ -20,7 +20,7 @@ testthat::test_that("Test functionality on pima data set", {
   data(pima)
   pima.sample <- sample(nrow(pima), 0.75*nrow(pima))#1:(0.75*nrow(pima))
   pima <- prim.data.prepare(pima)
-  pima.model <- prim(class ~ ., data = pima[pima.sample,], peeling.quantile = 0.4, min.support = 0.4)
+  pima.model <- prim(class ~ ., data = pima[pima.sample,], peeling.quantile = 0.4, min.support = 0.4, parallel = F)
   pima.predict <- predict(pima.model, pima[-pima.sample,])
 
   expect_is(pima.model, "prim.peel")
@@ -38,7 +38,7 @@ testthat::test_that("Test functionality on ames data set, with lots of categoric
   data(ames)
   ames.sample <- sample(nrow(ames), 0.75*nrow(ames))#1:(0.75*nrow(ames))
   ames <- prim.data.prepare(ames)
-  ames.model <- prim(SalePrice ~ . - PID - Order, data = ames[ames.sample,], peeling.quantile = 0.1, min.support = 0.1)
+  ames.model <- prim(SalePrice ~ . - PID - Order, data = ames[ames.sample,], peeling.quantile = 0.1, min.support = 0.1, parallel = F)
   ames.predict <- predict(ames.model, ames[-ames.sample,])
 
   expect_is(ames.model, "prim.peel")

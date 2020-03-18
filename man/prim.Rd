@@ -4,7 +4,7 @@
 \alias{prim}
 \title{Find the optimal sub-box using the PRIM peeling strategy}
 \usage{
-prim(formula, data, peeling.quantile = 0.03, min.support = 0.05)
+prim(formula, data, peeling.quantile = 0.03, min.support = 0.05, parallel = T)
 }
 \arguments{
 \item{formula}{Formula with a response and terms}
@@ -14,6 +14,8 @@ prim(formula, data, peeling.quantile = 0.03, min.support = 0.05)
 \item{peeling.quantile}{Quantile to peel off for numerical variables}
 
 \item{min.support}{Minimal size of a box to be valid}
+
+\item{parallel}{Should PRIM be run in parallel}
 }
 \value{
 An S3 object of class prim.peel

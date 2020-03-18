@@ -128,6 +128,7 @@ prim.box.index <- function(object, newdata, box.index) {
 #' @param data Data frame to find rules in
 #' @param peeling.quantile Quantile to peel off for numerical variables
 #' @param min.support Minimal size of a box to be valid
+#' @param parallel Should PRIM be run in parallel
 #' @return An S3 object of class prim.peel
 #' @author Jurian Baas
 #' @importFrom stats model.frame model.response complete.cases terms formula
@@ -144,7 +145,8 @@ prim <- function (
   formula,
   data,
   peeling.quantile = 0.03,
-  min.support = 0.05) {
+  min.support = 0.05,
+  parallel = T) {
 
   if(peeling.quantile <= 0) stop("Peeling quantile must be positive")
   if(peeling.quantile >= 1) stop("Peeling quantile must be a fraction smaller than 1")
@@ -187,6 +189,8 @@ prim <- function (
 
   # Turn factors into numerical
   M[sapply(M, is.factor)] <- lapply(M[sapply(M, is.factor)], function(col) {as.numeric(col)-1})
+
+  if(!parallel) RcppParallel::setThreadOptions(numThreads = 1);
 
   peel.result$peels <- peelCpp(
     M = as.matrix(M),
